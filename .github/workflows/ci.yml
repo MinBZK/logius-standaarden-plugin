@@ -15,9 +15,6 @@ jobs:
       - name: Valideer plugin.json
         run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
 
-      - name: Valideer marketplace.json
-        run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
-
       - name: Controleer vereiste bestanden
         run: |
           for f in LICENSE README.md CHANGELOG.md CLAUDE.md .claude-plugin/plugin.json; do
@@ -58,6 +55,34 @@ jobs:
           done
           if [ $error -eq 1 ]; then exit 1; fi
           echo "Alle skills hebben geldige frontmatter"
+
+      - name: Controleer SKILL.md maximaal 500 regels
+        run: |
+          error=0
+          for f in skills/*/SKILL.md; do
+            lines=$(wc -l < "$f")
+            if [ "$lines" -gt 500 ]; then
+              echo "FOUT: $f heeft $lines regels (max 500)"
+              error=1
+            else
+              echo "OK: $f heeft $lines regels"
+            fi
+          done
+          if [ $error -eq 1 ]; then exit 1; fi
+          echo "Alle skills binnen de 500-regels limiet"
+
+      - name: Controleer reference.md aanwezig voor domein-skills
+        run: |
+          DOMAINS="ls-api ls-dk ls-iam ls-fsc ls-logboek ls-notif ls-bomos ls-egov"
+          error=0
+          for skill in $DOMAINS; do
+            if [ ! -f "skills/$skill/reference.md" ]; then
+              echo "FOUT: skills/$skill/reference.md ontbreekt"
+              error=1
+            fi
+          done
+          if [ $error -eq 1 ]; then exit 1; fi
+          echo "Alle domein-skills hebben reference.md"
 
       - name: Controleer geen hardcoded paden
         run: |

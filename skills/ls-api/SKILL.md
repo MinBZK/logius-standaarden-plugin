@@ -9,14 +9,12 @@ allowed-tools:
   - Bash(gh search *)
   - Bash(curl -s *)
   - Bash(npx @stoplight/spectral-cli *)
-  - Bash(npx markdownlint *)
-  - Bash(npx @axe-core/cli *)
-  - Bash(node *)
-  - Bash(uv run *)
   - WebFetch(*)
 ---
 
 # API Design Rules (NL GOV)
+
+**Agent-instructie:** Deze skill helpt bij het implementeren van APIs conform de NL GOV API Design Rules. Gebruik de Spectral linter om OpenAPI specs te valideren. De regels zijn verplicht onder 'pas-toe-of-leg-uit' van het Forum Standaardisatie.
 
 De API Design Rules (ADR) zijn de Nederlandse standaard voor het ontwerpen van RESTful APIs bij de overheid. Ze zijn verplicht onder het "pas-toe-of-leg-uit" regime van het Forum Standaardisatie. De standaard bevat concrete, toetsbare regels voor URI-ontwerp, HTTP-methoden, versiebeheer, beveiliging, foutafhandeling en meer.
 
@@ -32,7 +30,6 @@ De API Design Rules (ADR) zijn de Nederlandse standaard voor het ontwerpen van R
 | [API-mod-encryption](https://github.com/logius-standaarden/API-mod-encryption) | Module: Encryption (JWE) | [Lees online](https://logius-standaarden.github.io/API-mod-encryption/) |
 | [API-mod-geospatial](https://github.com/logius-standaarden/API-mod-geospatial) | Module: Geospatial (GeoJSON, CRS) | [Lees online](https://logius-standaarden.github.io/API-mod-geospatial/) |
 | [api-linter-impactanalyse](https://github.com/logius-standaarden/api-linter-impactanalyse) | Python tool: test Spectral regels tegen echte OpenAPI specs uit het API-register | - |
-| [Respec-example-API-Designrules](https://github.com/logius-standaarden/Respec-example-API-Designrules) | ReSpec template voorbeeld voor ADR documentatie | - |
 | [zaakgericht-werken-api](https://github.com/logius-standaarden/zaakgericht-werken-api) | API-specificatie voor zaakgericht werken | - |
 
 ## Technische Regels
@@ -116,22 +113,7 @@ Verplichte security headers in alle API-responses:
 
 ### Signing Module (JAdES)
 
-Voor end-to-end berichtintegriteit en authenticiteit. Gebruikt JAdES detached signatures:
-
-- **Algoritme**: RSASSA-PSS (PS256), minimaal 256 bits
-- **Payload-Signature**: JWS in `Payload-Signature` HTTP header
-- **Message-Signature**: JWS in `Message-Signature` HTTP header (inclusief request-target, host, content-type, digest)
-
-OpenAPI representatie:
-```yaml
-components:
-  headers:
-    nlgov-adr-payload-sig:
-      schema:
-        type: string
-        format: jws-compact-detached
-        pattern: ^[A-Za-z0-9_-]+(?:(\\.\\.)[A-Za-z0-9_-]+){1}$
-```
+Voor end-to-end berichtintegriteit en authenticiteit. Gebruikt JAdES detached signatures met RSASSA-PSS (PS256), minimaal 256 bits. Signatures in `Payload-Signature` en `Message-Signature` HTTP headers. OpenAPI representatie met `format: jws-compact-detached`.
 
 ### Encryption Module (JWE)
 
@@ -139,81 +121,71 @@ Voor end-to-end versleuteling van request/response payloads wanneer transport-le
 
 ### Geospatial Module
 
-Verplicht bij geospatiale data. Regelt:
-1. Encodering van geo-data in request/response payloads (GeoJSON)
-2. Filtering van collecties op bounding box
-3. Omgang met verschillende coördinaatsystemen (CRS)
+Verplicht bij geospatiale data. Regelt GeoJSON encodering, bounding box filtering, en coördinaatsystemen (CRS).
 
-## Implementatievoorbeelden
+## Implementatievoorbeeld
 
 ### Python/FastAPI
 
 ```python
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Query, Request, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from datetime import date
 
 app = FastAPI(
     openapi_url="/v1/openapi.json",
-    title="Example API",
-    version="1.0.0",
-    contact={
-        "name": "API Team",
-        "url": "https://example.com/support",
-        "email": "support@example.com"
-    },
-    servers=[{"url": "https://api.example.com/v1"}]
+    title="Zaakgericht Werken API",
+    version="1.2.0",
+    contact={"name": "API Team", "url": "https://example.com/support", "email": "api@example.com"},
+    servers=[{"url": "https://api.example.com"}],
 )
 
-@app.get("/v1/items")
-def get_item(response: Response):
-    response.headers["API-Version"] = "1.0.0"
-    return {"id": 1, "name": "Example"}
+class Zaak(BaseModel):
+    id: str
+    zaaktype: str
+    omschrijving: str
+    startdatum: date
+    status: str
+
+@app.middleware("http")
+async def add_adr_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["API-Version"] = "1.2.0"
+    response.headers["Content-Type"] = "application/json"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+    return response
+
+@app.get("/v1/zaken", response_model=list[Zaak])
+async def list_zaken(
+    status: str | None = Query(None, description="Filter op status"),
+    startdatum__gte: date | None = Query(None, alias="startdatumGte", description="Vanaf datum"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
+):
+    """Haal zaken op met paginering en filtering (ADR-compliant)."""
+    # Paginering met standaard page_size=20, max 100
+    offset = (page - 1) * page_size
+    return db.query_zaken(status=status, since=startdatum__gte, offset=offset, limit=page_size)
+
+@app.exception_handler(HTTPException)
+async def problem_json_handler(request: Request, exc: HTTPException):
+    """RFC 9457 problem+json (verplicht per ADR)."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "type": f"https://api.example.com/errors/{exc.status_code}",
+            "title": exc.detail if isinstance(exc.detail, str) else "Error",
+            "status": exc.status_code,
+            "instance": str(request.url),
+        },
+        media_type="application/problem+json",
+    )
 ```
-
-### Express.js
-
-```javascript
-const express = require('express');
-const app = express();
-
-// API-Version header in alle responses
-app.use((req, res, next) => {
-  res.header('API-Version', '1.0.0');
-  next();
-});
-
-// OpenAPI endpoint
-app.get('/openapi.json', (req, res) => {
-  res.json({
-    openapi: '3.0.0',
-    info: {
-      title: 'Example API',
-      version: '1.0.0',
-      contact: {
-        name: 'API Support',
-        url: 'https://example.com/support',
-        email: 'support@example.com'
-      }
-    },
-    servers: [{ url: 'https://example.com/api/v1' }]
-  });
-});
-```
-
-### Go/Gin
-
-```go
-func setupRouter() *gin.Engine {
-    r := gin.Default()
-    r.Use(func(c *gin.Context) {
-        c.Header("API-Version", "1.0.0")
-        c.Next()
-    })
-    return r
-}
-```
-
-Er zijn ook referentie-implementaties in **ASP.NET** en **Quarkus** beschikbaar.
 
 ## Implementatie Checklist
 
@@ -230,12 +202,12 @@ Er zijn ook referentie-implementaties in **ASP.NET** en **Quarkus** beschikbaar.
 - [ ] Geen gevoelige data in URIs
 - [ ] CORS geconfigureerd
 
-## Tests & Validatie
+## Spectral Linter
 
-### Spectral Linter (30+ regels)
+De Spectral linter valideert OpenAPI specs tegen 30+ ADR regels.
 
 ```bash
-# Lint een OpenAPI spec tegen de ADR regels
+# Haal spectral.yml op en lint een OpenAPI spec
 gh api repos/logius-standaarden/API-Design-Rules/contents/linter/spectral.yml \
   -H "Accept: application/vnd.github.raw" > /tmp/adr-spectral.yml
 npx @stoplight/spectral-cli lint <jouw-spec.yaml> --ruleset /tmp/adr-spectral.yml
@@ -244,7 +216,7 @@ npx @stoplight/spectral-cli lint <jouw-spec.yaml> --ruleset /tmp/adr-spectral.ym
 gh api repos/logius-standaarden/API-Design-Rules/contents/linter/spectral.yml \
   -H "Accept: application/vnd.github.raw" | grep "nlgov:"
 
-# Linter testcases draaien
+# Linter testcases bekijken
 gh api repos/logius-standaarden/API-Design-Rules/contents/linter/testcases --jq '.[].name'
 ```
 
@@ -259,49 +231,6 @@ Belangrijke Spectral regels:
 - `nlgov:error-response-problem-json` - Problem+json voor fouten
 - `nlgov:semver-version` - Semantic versioning formaat
 
-### Impact Analyse Tool
+## Achtergrondinfo
 
-```bash
-gh repo clone logius-standaarden/api-linter-impactanalyse /tmp/api-linter
-cd /tmp/api-linter
-uv run run-spectral-for-single-rule.py --rule nlgov:paths-no-trailing-slash
-```
-
-### Centrale Checks
-
-```bash
-# WCAG accessibility check
-npx @axe-core/cli https://logius-standaarden.github.io/API-Design-Rules/ --tags wcag2aa
-
-# Markdown lint
-npx markdownlint-cli '**/*.md'
-```
-
-## Handige Commando's
-
-```bash
-# Laatste wijzigingen aan de ADR
-gh api repos/logius-standaarden/API-Design-Rules/commits \
-  --jq '.[:5] | .[] | "\(.commit.committer.date) \(.commit.message | split("\n")[0])"'
-
-# Open issues/PRs
-gh issue list --repo logius-standaarden/API-Design-Rules
-gh pr list --repo logius-standaarden/API-Design-Rules
-
-# Zoek naar specifiek onderwerp in de spec
-gh search code "pagination" --repo logius-standaarden/API-Design-Rules
-
-# Inhoud van een bestand ophalen
-gh api repos/logius-standaarden/API-Design-Rules/contents/README.md \
-  -H "Accept: application/vnd.github.raw"
-```
-
-## Gerelateerde Skills
-
-| Skill | Relatie |
-|-------|---------|
-| `/ls-iam` | OAuth/OIDC profielen voor API-authenticatie |
-| `/ls-dk` | Digikoppeling REST-API koppelvlak gebruikt ADR |
-| `/ls-fsc` | FSC dienstverlening via ADR-conforme APIs |
-| `/ls-pub` | ReSpec tooling voor ADR documentatie |
-| `/ls` | Overzicht alle standaarden |
+Zie [reference.md](reference.md) voor Express.js/Go voorbeelden, impact analyse tool, en repo-exploratie commando's.
