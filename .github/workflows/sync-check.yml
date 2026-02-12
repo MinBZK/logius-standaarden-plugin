@@ -1,0 +1,62 @@
+name: Check upstream changes
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # elke maandag 8:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controleer upstream wijzigingen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## Upstream wijzigingen check - $(date -I)" > /tmp/report.md
+          echo "" >> /tmp/report.md
+          changes=0
+
+          # Lees domeinen uit plugin.json
+          domains=$(python3 -c "
+          import json
+          data = json.load(open('.claude-plugin/plugin.json'))
+          for domain, ref in data.get('upstreamSync', {}).get('domains', {}).items():
+              repo, branch = ref.split('@')
+              print(f'{domain}|{repo}|{branch}')
+          ")
+
+          while IFS='|' read -r domain repo branch; do
+            last_checked=$(python3 -c "
+            import json
+            print(json.load(open('.claude-plugin/plugin.json'))['upstreamSync']['lastChecked'])
+            ")
+
+            # Haal laatste commit op van upstream repo
+            last_commit=$(gh api "repos/logius-standaarden/$repo/commits?sha=$branch&since=${last_checked}T00:00:00Z&per_page=1" --jq 'length' 2>/dev/null || echo "0")
+
+            if [ "$last_commit" != "0" ]; then
+              echo "- **$domain** ($repo@$branch): wijzigingen sinds $last_checked" >> /tmp/report.md
+              changes=$((changes + 1))
+            fi
+          done <<< "$domains"
+
+          if [ $changes -eq 0 ]; then
+            echo "Geen upstream wijzigingen gevonden."
+            exit 0
+          fi
+
+          echo "" >> /tmp/report.md
+          echo "$changes domein(en) met wijzigingen." >> /tmp/report.md
+          echo "" >> /tmp/report.md
+          echo "Actie: controleer of skill-content nog actueel is en update indien nodig." >> /tmp/report.md
+
+          cat /tmp/report.md
+
+          # Maak issue aan
+          gh issue create \
+            --title "Upstream sync check: $changes domein(en) gewijzigd" \
+            --body "$(cat /tmp/report.md)" \
+            --label "sync"

@@ -1,0 +1,47 @@
+publiccodeYmlVersion: "0.2"
+categories:
+  - it-development
+description:
+  nl:
+    features:
+      - 10 skills voor 9 domeinen en 88 Logius standaarden repositories
+      - Implementatievoorbeelden in Python, JavaScript, curl, XML en YAML
+      - On-demand content ophalen via GitHub API
+      - Validatie-integraties (Spectral, markdownlint, axe-core)
+    genericName: Claude Code plugin
+    longDescription: |
+      Claude Code plugin voor het werken met de 88 GitHub repositories van
+      Logius standaarden voor Nederlandse overheidsinteroperabiliteit. Bevat
+      skills voor API Design Rules, Digikoppeling, OAuth NL, FSC, Logboek
+      Dataverwerkingen, CloudEvents, BOMOS, E-Government en Publicatie tooling.
+    shortDescription: Claude Code plugin voor Logius standaarden
+  en:
+    features:
+      - 10 skills covering 9 domains and 88 Logius standards repositories
+      - Implementation examples in Python, JavaScript, curl, XML and YAML
+      - On-demand content retrieval via GitHub API
+      - Validation integrations (Spectral, markdownlint, axe-core)
+    genericName: Claude Code plugin
+    longDescription: |
+      Claude Code plugin for working with the 88 GitHub repositories of
+      Logius standards for Dutch government interoperability. Contains skills
+      for API Design Rules, Digikoppeling, OAuth NL, FSC, Logboek
+      Dataverwerkingen, CloudEvents, BOMOS, E-Government and Publication tooling.
+    shortDescription: Claude Code plugin for Logius standards
+developmentStatus: stable
+legal:
+  license: EUPL-1.2
+localisation:
+  availableLanguages:
+    - nl
+    - en
+  localisationReady: false
+maintenance:
+  contacts:
+    - name: Logius
+      email: standaarden@logius.nl
+  type: community
+name: logius-standaarden-plugin
+releaseDate: "2026-02-12"
+softwareType: standalone/other
+url: "https://github.com/MinBZK/logius-standaarden-plugin"
