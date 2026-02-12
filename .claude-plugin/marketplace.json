@@ -1,0 +1,15 @@
+{
+  "name": "logius-standaarden",
+  "owner": {
+    "name": "Logius",
+    "email": "standaarden@logius.nl"
+  },
+  "plugins": [
+    {
+      "name": "logius-standaarden",
+      "source": ".",
+      "description": "Skills voor het werken met Nederlandse overheidsstandaarden (Digikoppeling, API Design Rules, OAuth NL, FSC, CloudEvents, BOMOS, en meer)",
+      "version": "1.0.0"
+    }
+  ]
+}
