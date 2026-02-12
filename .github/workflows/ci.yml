@@ -15,6 +15,9 @@ jobs:
       - name: Valideer plugin.json
         run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
 
+      - name: Valideer marketplace.json
+        run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
       - name: Controleer vereiste bestanden
         run: |
           for f in LICENSE README.md CHANGELOG.md CLAUDE.md .claude-plugin/plugin.json; do
