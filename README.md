@@ -7,14 +7,6 @@ Claude Code plugin voor het werken met de 88 GitHub repositories van [Logius sta
 
 ## Installatie
 
-### Via marketplace (aanbevolen)
-
-```bash
-/plugin marketplace add MinBZK/logius-standaarden-plugin
-```
-
-### Lokaal
-
 ```bash
 git clone https://github.com/MinBZK/logius-standaarden-plugin.git
 claude --plugin-dir ./logius-standaarden-plugin
@@ -22,12 +14,25 @@ claude --plugin-dir ./logius-standaarden-plugin
 
 ## Wat doet deze plugin?
 
-De plugin biedt 10 skills die helpen bij:
-- **Opzoeken** van specificaties en architectuurdocumentatie
+De plugin biedt 10 skills die een AI-agent helpen bij:
+
+- **Implementeren** van standaard-conforme code (OAuth, Digikoppeling, CloudEvents, etc.)
 - **Navigeren** door de 88 repositories, gegroepeerd in 9 domeinen
 - **Ophalen** van actuele content via `gh api` en `WebFetch`
-- **Valideren** met Spectral linter, WCAG checks, markdown linting
-- **Begrijpen** van de samenhang tussen standaarden
+- **Valideren** met Spectral linter, WCAG checks, markdown linting (via `/ls-pub`)
+- **Kiezen** van het juiste profiel of protocol via beslisbomen en keuzematrices
+
+### Agent-instructive aanpak
+
+Skills zijn geschreven als **agent-instructies**, niet als encyclopedie. Elke SKILL.md bevat:
+
+1. Wanneer de skill gebruikt moet worden
+2. Repository-overzicht
+3. Beslisbomen en keuzematrices
+4. Werkende implementatievoorbeelden
+5. Domein-specifieke foutafhandeling
+
+Achtergrondkennis (architectuur, protocollen, concepten) staat in `reference.md` bestanden die de agent kan raadplegen wanneer nodig.
 
 ## Skills
 
@@ -42,7 +47,7 @@ De plugin biedt 10 skills die helpen bij:
 | `/ls-notif` | CloudEvents & Notificaties | 4 | NL GOV CloudEvents profiel, pub/sub |
 | `/ls-bomos` | BOMOS Governance | 10 | Beheer- en Ontwikkelmodel voor Open Standaarden |
 | `/ls-egov` | E-Government Services | 6 | Terugmelding, Digimelding, e-procurement |
-| `/ls-pub` | Publicatie & Tooling | 8 | ReSpec, GitHub Actions workflows, tech radar |
+| `/ls-pub` | Publicatie & Tooling | 8 | ReSpec, GitHub Actions, WCAG checks, markdown lint |
 
 ## Voorbeeldvragen
 
@@ -53,6 +58,8 @@ Toon de laatste wijzigingen aan de Digikoppeling architectuur
 Run de Spectral linter op mijn OpenAPI spec
 Hoe implementeer ik OAuth 2.0 NL profiel?
 Wat is het verschil tussen ebMS2 en REST koppelvlak?
+Hoe stel ik een BOMOS beheermodel op?
+Run een WCAG check op mijn document
 ```
 
 ## Structuur
@@ -60,23 +67,20 @@ Wat is het verschil tussen ebMS2 en REST koppelvlak?
 ```
 .claude-plugin/
   plugin.json              # Plugin manifest met versie en upstream tracking
-  marketplace.json         # Marketplace metadata
 skills/
   ls/SKILL.md              # Meta/overzicht skill
-  ls-api/SKILL.md          # API Design Rules
-  ls-dk/SKILL.md           # Digikoppeling
-  ls-iam/SKILL.md          # Identity & Access Management
-  ls-fsc/SKILL.md          # Federated Service Connectivity
-  ls-logboek/SKILL.md      # Logboek Dataverwerkingen
-  ls-notif/SKILL.md        # CloudEvents & Notificaties
-  ls-bomos/SKILL.md        # BOMOS Governance
-  ls-egov/SKILL.md         # E-Government Services
-  ls-pub/SKILL.md          # Publicatie & Tooling
+  ls-api/
+    SKILL.md               # Agent-instructies en implementatievoorbeelden
+    reference.md           # Achtergrondkennis en repo-exploratie
+  ls-dk/
+    SKILL.md
+    reference.md
+  ...                      # Idem voor alle 9 domein-skills
 ```
 
 ## Content strategie
 
-Skills bevatten compacte samenvattingen, repo-overzichten en kernconcepten. Actuele content wordt on-demand opgehaald via `gh api` en `WebFetch` - de GitHub repos zelf zijn de bron van waarheid.
+Skills bevatten compacte agent-instructies, beslisbomen en implementatievoorbeelden. Encyclopedische achtergrondkennis staat in `reference.md`. Actuele content wordt on-demand opgehaald via `gh api` en `WebFetch` - de GitHub repos zelf zijn de bron van waarheid.
 
 ## Versioning
 

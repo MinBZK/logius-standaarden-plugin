@@ -8,12 +8,12 @@ allowed-tools:
   - Bash(gh pr list *)
   - Bash(gh search *)
   - Bash(curl -s *)
-  - Bash(npx markdownlint *)
-  - Bash(npx @axe-core/cli *)
   - WebFetch(*)
 ---
 
 # Identity & Access Management (IAM)
+
+**Agent-instructie:** Deze skill helpt bij het implementeren van authenticatie en autorisatie voor overheids-APIs. Gebruik de OAuth 2.0 NL en OIDC NL GOV profielen voor nieuwe implementaties. AuthZEN voor geexternaliseerde autorisatie.
 
 De IAM-standaarden van Logius definiëren profielen voor authenticatie en autorisatie bij Nederlandse overheids-APIs. Dit omvat OAuth 2.0, OpenID Connect, AuthZEN en aanvullende profielen specifiek voor de Nederlandse overheid. Deze standaarden waarborgen een consistent en veilig identiteits- en toegangsbeheer binnen het publieke domein.
 
@@ -55,11 +55,6 @@ Het token endpoint vereist sterke client authenticatie:
 - **mTLS (Mutual TLS)**: de client presenteert een TLS-certificaat (bij voorkeur PKIoverheid) bij het aanroepen van het token endpoint. Dit biedt sterke cryptografische binding.
 - **private_key_jwt**: de client ondertekent een JWT-assertion met zijn private key en stuurt deze mee als client authenticatie. De authorization server valideert met de geregistreerde public key.
 
-### Toegangsbeheer en aanbevelingen
-
-- **Scopes** vormen het primaire mechanisme voor toegangsbeheer. Scopes definiëren de reikwijdte van de toegang die een client namens de resource owner verkrijgt.
-- **Pushed Authorization Requests (PAR)** worden aanbevolen (RFC 9126). Hiermee stuurt de client het authorization request eerst naar een dedicated endpoint van de authorization server, in plaats van via de browser. Dit voorkomt manipulatie van request parameters en vergroot de vertrouwelijkheid.
-
 ---
 
 ## OpenID Connect NL GOV Profiel
@@ -91,29 +86,18 @@ Het ID Token moet minimaal de volgende claims bevatten:
 | `iat` | Tijdstip van uitgifte (issued at) |
 | `acr` | Betrouwbaarheidsniveau van de authenticatie (authentication context class reference) |
 
-### Userinfo endpoint
-
-Voor aanvullende claims (zoals naam, e-mailadres, BSN) wordt het Userinfo endpoint gebruikt. De Relying Party roept dit endpoint aan met het access token. Welke claims beschikbaar zijn hangt af van de gevraagde scopes en het autorisatiebeleid van de OpenID Provider.
-
 ### ID Token validatie
 
-Relying Parties moeten het ID Token volledig valideren:
+Bij het valideren van een OIDC ID Token MOETEN de volgende stappen worden doorlopen:
 
-- Controleer de `iss` claim tegen de verwachte issuer
-- Controleer de `aud` claim tegen de eigen client_id
-- Controleer de `exp` claim (token mag niet verlopen zijn)
-- Valideer de digitale handtekening met de publieke sleutel van de OpenID Provider (via het JWKS endpoint)
-- Controleer de `acr` claim tegen het gevraagde betrouwbaarheidsniveau
-
-### Client registratie
-
-Clients moeten vooraf worden geregistreerd bij de OpenID Provider. Bij registratie worden vastgelegd:
-
-- Redirect URI's (exacte match, geen wildcards)
-- Ondersteunde response types en grant types
-- Client authenticatiemethode (conform OAuth NL profiel)
-- Gevraagde scopes en claims
-- Publieke sleutels voor token validatie
+1. **Signature** - Verifieer de JWS handtekening met de publieke sleutel van de provider (via `jwks_uri`)
+2. **iss** - MOET exact overeenkomen met de `issuer` uit het discovery document
+3. **aud** - MOET de `client_id` van de relying party bevatten
+4. **nonce** - MOET exact overeenkomen met de nonce uit het authorization request
+5. **exp** - MOET in de toekomst liggen (token niet verlopen)
+6. **iat** - MAG niet te ver in het verleden liggen (max 5 minuten aanbevolen)
+7. **acr** - MOET minimaal het gevraagde betrouwbaarheidsniveau bevatten
+8. **jti** - MOET uniek zijn (bewaar 12+ maanden om hergebruik te detecteren)
 
 ---
 
@@ -248,42 +232,6 @@ De Authorization Decision Log standaard definieert een gestructureerd formaat vo
 }
 ```
 
-### Integratie en transport
-
-- **FSC Logging**: de Authorization Decision Log integreert met FSC (Federated Service Connectivity) logging via het `transaction_id` veld. Hiermee kunnen autorisatiebeslissingen worden gerelateerd aan de bredere transactieketen.
-- **OpenTelemetry Protocol (OTLP)**: OTLP wordt aanbevolen als transportprotocol voor het verzenden van log records naar centrale logging-infrastructuur. Dit sluit aan bij de W3C Trace Context die al in de `trace_id` en `span_id` velden wordt gebruikt.
-- **Replay van historische beslissingen**: doordat het volledige request, de response en optioneel de policies en PIP-informatie worden vastgelegd, is het mogelijk om historische beslissingen te reproduceren en te analyseren. Dit is waardevol voor audits en het opsporen van beleidsfouten.
-
----
-
-## SAML
-
-Security Assertion Markup Language (SAML) is een legacy standaard voor federatieve authenticatie en autorisatie. Hoewel nieuwere implementaties de voorkeur geven aan OAuth 2.0 en OpenID Connect, is SAML nog steeds in gebruik bij:
-
-- **DigiD**: het authenticatiesysteem voor burgers
-- **eHerkenning**: het authenticatiesysteem voor bedrijven
-
-De SAML-specificatie voor de Nederlandse overheid beschrijft profielen voor het uitwisselen van authenticatie-assertions tussen Identity Providers en Service Providers. Het profiel specificeert onder andere:
-
-- Verplichte gebruik van ondertekende en versleutelde assertions
-- Metadata-eisen voor Identity Providers en Service Providers
-- Binding-specificaties (HTTP POST, HTTP Redirect, SOAP)
-- Vereisten voor Single Sign-On en Single Logout
-
-Nieuwe implementaties worden aangemoedigd om OpenID Connect te adopteren, maar bestaande SAML-koppelingen met DigiD en eHerkenning blijven ondersteund.
-
----
-
-## OIN (Organisatie Identificatie Nummer)
-
-Het Organisatie Identificatie Nummer (OIN) is de unieke identifier voor organisaties binnen het Nederlandse overheidsdomein. Het OIN wordt onder andere gebruikt in:
-
-- **PKIoverheid-certificaten**: het OIN is opgenomen in het `subject.serialNumber` veld van PKIoverheid-certificaten die worden gebruikt voor server- en client-authenticatie (mTLS)
-- **Digikoppeling**: als organisatie-identifier in berichtenuitwisseling
-- **OAuth en OIDC**: als client identifier of als claim voor organisatie-identificatie
-
-Het OIN-stelsel wordt ook beschreven in de Digikoppeling-standaarden (zie `/ls-dk`).
-
 ---
 
 ## Implementatievoorbeelden
@@ -406,19 +354,6 @@ curl -s https://auth.example.com/.well-known/openid-configuration | jq '{
 }'
 ```
 
-### ID Token Validatie Checklist
-
-Bij het valideren van een OIDC ID Token MOETEN de volgende stappen worden doorlopen:
-
-1. **Signature** - Verifieer de JWS handtekening met de publieke sleutel van de provider (via `jwks_uri`)
-2. **iss** - MOET exact overeenkomen met de `issuer` uit het discovery document
-3. **aud** - MOET de `client_id` van de relying party bevatten
-4. **nonce** - MOET exact overeenkomen met de nonce uit het authorization request
-5. **exp** - MOET in de toekomst liggen (token niet verlopen)
-6. **iat** - MAG niet te ver in het verleden liggen (max 5 minuten aanbevolen)
-7. **acr** - MOET minimaal het gevraagde betrouwbaarheidsniveau bevatten
-8. **jti** - MOET uniek zijn (bewaar 12+ maanden om hergebruik te detecteren)
-
 ### FastAPI Resource Server met Token Validatie
 
 ```python
@@ -497,50 +432,6 @@ curl -X POST https://auth.example.com/introspect \
 # {"active": false}
 ```
 
----
+## Achtergrondinfo
 
-## Tests & Validatie
-
-IAM repositories gebruiken de centrale `Automatisering` workflows:
-
-```bash
-# WCAG toegankelijkheidscheck op gepubliceerde specificatie
-npx @axe-core/cli https://logius-standaarden.github.io/OAuth-NL-profiel/ --tags wcag2aa
-
-# Markdown lint op bronbestanden
-npx markdownlint-cli '**/*.md'
-
-# CI/CD workflows bekijken voor een specifieke repository
-gh api repos/logius-standaarden/OAuth-NL-profiel/contents/.github/workflows --jq '.[].name'
-```
-
-## Handige Commando's
-
-```bash
-# Laatste wijzigingen OAuth NL profiel
-gh api repos/logius-standaarden/OAuth-NL-profiel/commits --jq '.[:5] | .[] | "\(.commit.committer.date) \(.commit.message | split("\n")[0])"'
-
-# Open issues per repository
-gh issue list --repo logius-standaarden/OAuth-NL-profiel
-gh issue list --repo logius-standaarden/OIDC-NLGOV
-gh issue list --repo logius-standaarden/authzen-nlgov
-gh issue list --repo logius-standaarden/authorization-decision-log
-
-# AuthZEN specificatie inhoud bekijken
-gh api repos/logius-standaarden/authzen-nlgov/contents --jq '.[].name'
-
-# Zoek naar specifieke termen in IAM repositories
-gh search code "PKCE" --owner logius-standaarden
-gh search code "acr_values" --owner logius-standaarden
-gh search code "PDP" --owner logius-standaarden
-```
-
-## Gerelateerde Skills
-
-| Skill | Relatie |
-|-------|---------|
-| `/ls-api` | API Design Rules vereisen OAuth/OIDC voor authenticatie |
-| `/ls-dk` | OIN-stelsel gedeeld met Digikoppeling, mTLS-certificaten |
-| `/ls-logboek` | Authorization Decision Log raakt aan logging dataverwerkingen |
-| `/ls-fsc` | FSC Logging integratie via transaction_id |
-| `/ls` | Overzicht alle standaarden |
+Zie [reference.md](reference.md) voor SAML legacy info, OIN-stelsel, en gedetailleerde protocoldocumentatie.
