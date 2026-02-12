@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Valideer plugin.json
+        run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+
+      - name: Valideer marketplace.json
+        run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
+      - name: Controleer vereiste bestanden
+        run: |
+          for f in LICENSE README.md CHANGELOG.md CLAUDE.md .claude-plugin/plugin.json; do
+            if [ ! -f "$f" ]; then
+              echo "FOUT: $f ontbreekt"
+              exit 1
+            fi
+          done
+          echo "Alle vereiste bestanden aanwezig"
+
+      - name: Controleer skill structuur
+        run: |
+          EXPECTED="ls ls-api ls-dk ls-iam ls-fsc ls-logboek ls-notif ls-bomos ls-egov ls-pub"
+          for skill in $EXPECTED; do
+            if [ ! -f "skills/$skill/SKILL.md" ]; then
+              echo "FOUT: skills/$skill/SKILL.md ontbreekt"
+              exit 1
+            fi
+          done
+          echo "Alle 10 skills aanwezig"
+
+      - name: Controleer SKILL.md frontmatter
+        run: |
+          error=0
+          for f in skills/*/SKILL.md; do
+            if ! head -1 "$f" | grep -q '^---$'; then
+              echo "FOUT: $f mist YAML frontmatter"
+              error=1
+            fi
+            if ! grep -q '^name:' "$f"; then
+              echo "FOUT: $f mist 'name' in frontmatter"
+              error=1
+            fi
+            if ! grep -q '^description:' "$f"; then
+              echo "FOUT: $f mist 'description' in frontmatter"
+              error=1
+            fi
+          done
+          if [ $error -eq 1 ]; then exit 1; fi
+          echo "Alle skills hebben geldige frontmatter"
+
+      - name: Controleer geen hardcoded paden
+        run: |
+          if grep -r '/Users/' skills/ .claude-plugin/ README.md 2>/dev/null; then
+            echo "FOUT: hardcoded gebruikerspaden gevonden"
+            exit 1
+          fi
+          echo "Geen hardcoded paden gevonden"
+
+  lint-markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint markdown bestanden
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: '**/*.md'
+          config: |
+            {
+              "MD013": false,
+              "MD033": false,
+              "MD041": false,
+              "MD024": false
+            }
