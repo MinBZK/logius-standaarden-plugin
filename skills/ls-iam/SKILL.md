@@ -286,6 +286,219 @@ Het OIN-stelsel wordt ook beschreven in de Digikoppeling-standaarden (zie `/ls-d
 
 ---
 
+## Implementatievoorbeelden
+
+### OAuth 2.0 Authorization Code Flow met PKCE (Python)
+
+```python
+# Complete example using requests library
+import hashlib, base64, secrets, requests
+
+# 1. PKCE code_verifier en code_challenge genereren
+code_verifier = secrets.token_urlsafe(64)  # min 43, max 128 chars
+code_challenge = base64.urlsafe_b64encode(
+    hashlib.sha256(code_verifier.encode()).digest()
+).rstrip(b'=').decode()
+
+# 2. Authorization request (redirect user to this URL)
+auth_url = "https://auth.example.com/authorize"
+params = {
+    "client_id": "my-client-id",
+    "response_type": "code",
+    "scope": "openid profile",
+    "redirect_uri": "https://myapp.example.com/callback",
+    "state": secrets.token_urlsafe(32),  # min 128 bits entropy
+    "code_challenge": code_challenge,
+    "code_challenge_method": "S256",
+    "acr_values": "http://eidas.europa.eu/LoA/substantial",  # eIDAS level
+}
+# redirect_url = f"{auth_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
+
+# 3. Token request (after receiving authorization code)
+token_response = requests.post("https://auth.example.com/token", data={
+    "grant_type": "authorization_code",
+    "code": "received_auth_code",
+    "redirect_uri": "https://myapp.example.com/callback",
+    "client_id": "my-client-id",
+    "code_verifier": code_verifier,  # PKCE proof
+})
+tokens = token_response.json()
+# tokens = {"access_token": "eyJ...", "token_type": "Bearer", "id_token": "eyJ...", "expires_in": 3600}
+```
+
+### Client Credentials Flow met private_key_jwt (Python)
+
+```python
+import jwt, time, uuid, requests
+
+# JWT client assertion aanmaken (private_key_jwt authenticatie)
+private_key = open("client_private_key.pem").read()
+
+now = int(time.time())
+client_assertion = jwt.encode({
+    "iss": "my-client-id",
+    "sub": "my-client-id",
+    "aud": "https://auth.example.com/token",
+    "jti": str(uuid.uuid4()),  # uniek per request
+    "iat": now,
+    "exp": now + 300,  # max 5 minuten geldig
+}, private_key, algorithm="PS256", headers={"kid": "my-key-id"})
+
+# Token request met client assertion
+response = requests.post("https://auth.example.com/token", data={
+    "grant_type": "client_credentials",
+    "scope": "api.read api.write",
+    "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    "client_assertion": client_assertion,
+})
+access_token = response.json()["access_token"]
+```
+
+### JWT Access Token Validatie (Python)
+
+```python
+import jwt, requests
+
+# JWKS ophalen van de authorization server
+jwks_url = "https://auth.example.com/.well-known/jwks.json"
+jwks = requests.get(jwks_url).json()
+
+# Access token valideren
+try:
+    payload = jwt.decode(
+        access_token,
+        jwt.PyJWKClient(jwks_url).get_signing_key_from_jwt(access_token),
+        algorithms=["RS256", "PS256"],
+        audience="https://api.example.com",  # verwachte audience
+        issuer="https://auth.example.com",   # verwachte issuer
+        options={
+            "verify_exp": True,
+            "verify_iat": True,
+            "require": ["iss", "sub", "aud", "exp", "jti", "client_id"],
+        }
+    )
+    # Verplichte claims per NL GOV profiel
+    assert "client_id" in payload
+    assert "jti" in payload  # uniek, niet herbruikbaar
+except jwt.ExpiredSignatureError:
+    # Token verlopen - nieuwe token ophalen
+    pass
+except jwt.InvalidTokenError as e:
+    # Token ongeldig - toegang weigeren
+    pass
+```
+
+### OIDC Discovery Endpoint Ophalen (curl)
+
+```bash
+# Discovery document ophalen
+curl -s https://auth.example.com/.well-known/openid-configuration | jq '{
+  issuer,
+  authorization_endpoint,
+  token_endpoint,
+  jwks_uri,
+  scopes_supported,
+  response_types_supported,
+  grant_types_supported,
+  acr_values_supported,
+  subject_types_supported,
+  token_endpoint_auth_methods_supported
+}'
+```
+
+### ID Token Validatie Checklist
+
+Bij het valideren van een OIDC ID Token MOETEN de volgende stappen worden doorlopen:
+
+1. **Signature** - Verifieer de JWS handtekening met de publieke sleutel van de provider (via `jwks_uri`)
+2. **iss** - MOET exact overeenkomen met de `issuer` uit het discovery document
+3. **aud** - MOET de `client_id` van de relying party bevatten
+4. **nonce** - MOET exact overeenkomen met de nonce uit het authorization request
+5. **exp** - MOET in de toekomst liggen (token niet verlopen)
+6. **iat** - MAG niet te ver in het verleden liggen (max 5 minuten aanbevolen)
+7. **acr** - MOET minimaal het gevraagde betrouwbaarheidsniveau bevatten
+8. **jti** - MOET uniek zijn (bewaar 12+ maanden om hergebruik te detecteren)
+
+### FastAPI Resource Server met Token Validatie
+
+```python
+from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import jwt, requests
+
+app = FastAPI(title="NL GOV Protected Resource", version="1.0.0")
+security = HTTPBearer()
+
+JWKS_URL = "https://auth.example.com/.well-known/jwks.json"
+ISSUER = "https://auth.example.com"
+AUDIENCE = "https://api.example.com"
+
+jwks_client = jwt.PyJWKClient(JWKS_URL)
+
+async def validate_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    """Valideer OAuth 2.0 NL GOV access token."""
+    try:
+        signing_key = jwks_client.get_signing_key_from_jwt(credentials.credentials)
+        payload = jwt.decode(
+            credentials.credentials,
+            signing_key,
+            algorithms=["RS256", "PS256"],
+            audience=AUDIENCE,
+            issuer=ISSUER,
+        )
+        return payload
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+@app.get("/v1/resources")
+async def get_resources(token: dict = Depends(validate_token)):
+    """Beschermd endpoint - vereist geldig NL GOV OAuth token."""
+    return {
+        "client_id": token.get("client_id"),
+        "sub": token.get("sub"),
+        "scope": token.get("scope"),
+        "data": [{"id": 1, "name": "Resource"}]
+    }
+```
+
+## Foutafhandeling
+
+### OAuth 2.0 Error Responses
+
+Het NL GOV profiel volgt RFC 6749 voor error responses:
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "The authorization code has expired"
+}
+```
+
+| Error Code | HTTP Status | Beschrijving |
+|-----------|-------------|-------------|
+| `invalid_request` | 400 | Verplichte parameter ontbreekt of ongeldig |
+| `invalid_client` | 401 | Client authenticatie mislukt (verkeerde client_assertion) |
+| `invalid_grant` | 400 | Authorization code verlopen of al gebruikt |
+| `unauthorized_client` | 400 | Client niet geautoriseerd voor dit grant type |
+| `unsupported_grant_type` | 400 | Grant type niet ondersteund |
+| `invalid_scope` | 400 | Scope ongeldig of niet beschikbaar |
+
+### Token Introspection Response
+
+```bash
+# Token introspection (voor resource servers die tokens niet zelf kunnen valideren)
+curl -X POST https://auth.example.com/introspect \
+  -H "Authorization: Bearer $RESOURCE_SERVER_TOKEN" \
+  -d "token=$ACCESS_TOKEN" | jq
+
+# Response bij geldig token:
+# {"active": true, "scope": "api.read", "client_id": "...", "sub": "...", "exp": 1234567890}
+# Response bij ongeldig token:
+# {"active": false}
+```
+
+---
+
 ## Tests & Validatie
 
 IAM repositories gebruiken de centrale `Automatisering` workflows:

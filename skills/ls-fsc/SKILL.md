@@ -11,7 +11,6 @@ allowed-tools:
   - Bash(npx markdownlint *)
   - Bash(npx @axe-core/cli *)
   - Bash(node *)
-  - Bash(docker compose *)
   - WebFetch(*)
 ---
 
@@ -355,6 +354,236 @@ Elk transactielog bevat minimaal de volgende velden:
 - **Outway**: logt uitgaande verzoeken met `direction: out`, het gebruikte grant en de bestemming
 - **Inway**: logt inkomende verzoeken met `direction: in`, het gevalideerde grant en de bron
 - Beide componenten loggen dezelfde `transaction_id`, waardoor correlatie mogelijk is
+
+## Implementatievoorbeelden
+
+### Outway Proxy (Python/FastAPI)
+
+```python
+from fastapi import FastAPI, Request, Response
+import requests, jwt
+
+app = FastAPI(title="FSC Outway Proxy")
+
+MANAGER_URL = "https://manager.example.com:8443"
+MTLS_CERT = ("pkio_cert.pem", "pkio_key.pem")
+CA_BUNDLE = "pkio_ca_chain.pem"
+
+# Token cache per grant_hash
+token_cache: dict[str, dict] = {}
+
+def get_access_token(grant_hash: str, peer_id: str) -> str:
+    """Haal access token op van de Manager (OAuth 2.0 Client Credentials)."""
+    cached = token_cache.get(grant_hash)
+    if cached and cached["exp"] > time.time():
+        return cached["token"]
+
+    response = requests.post(
+        f"{MANAGER_URL}/token",
+        data={
+            "grant_type": "client_credentials",
+            "scope": grant_hash,
+            "client_id": peer_id,
+        },
+        cert=MTLS_CERT,
+        verify=CA_BUNDLE,
+    )
+    response.raise_for_status()
+    token_data = response.json()
+    token_cache[grant_hash] = {
+        "token": token_data["access_token"],
+        "exp": jwt.decode(token_data["access_token"], options={"verify_signature": False})["exp"]
+    }
+    return token_data["access_token"]
+
+@app.api_route("/{service_name}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def proxy_request(service_name: str, path: str, request: Request):
+    """Proxy verzoeken naar een service via FSC Inway."""
+    grant_hash = resolve_grant_hash(service_name)  # uit lokale contracten
+    inway_url = resolve_inway_url(service_name)     # uit directory
+
+    access_token = get_access_token(grant_hash, "mijn-oin")
+
+    # Forward request naar Inway met Fsc-Authorization header
+    response = requests.request(
+        method=request.method,
+        url=f"{inway_url}/{service_name}/{path}",
+        headers={
+            "Fsc-Authorization": f"Bearer {access_token}",
+            "Fsc-Transaction-Id": str(uuid.uuid4()),  # UUID V7 per request
+            **{k: v for k, v in request.headers.items()
+               if k.lower() not in ("host", "fsc-authorization")},
+        },
+        data=await request.body(),
+        cert=MTLS_CERT,
+        verify=CA_BUNDLE,
+    )
+
+    return Response(
+        content=response.content,
+        status_code=response.status_code,
+        headers=dict(response.headers),
+    )
+```
+
+### Inway Token Validatie (Python)
+
+```python
+import jwt
+from cryptography.x509 import load_pem_x509_certificate
+from cryptography.hazmat.primitives.hashes import SHA256
+
+def validate_fsc_token(token: str, client_cert_pem: bytes, group_id: str) -> dict:
+    """Valideer een FSC access token op de Inway."""
+    # 1. Decode token (signature verificatie met Manager's publieke sleutel)
+    payload = jwt.decode(token, manager_public_key, algorithms=["RS256", "PS256"])
+
+    # 2. Controleer group_id
+    if payload["gid"] != group_id:
+        raise ValueError(f"Verkeerde group_id: {payload['gid']}")
+
+    # 3. Controleer certificate binding (RFC 8705)
+    cert = load_pem_x509_certificate(client_cert_pem)
+    cert_thumbprint = base64url_encode(cert.fingerprint(SHA256()))
+    if payload["cnf"]["x5t#S256"] != cert_thumbprint:
+        raise ValueError("Certificate thumbprint komt niet overeen met token")
+
+    # 4. Controleer service bestaat
+    if payload["svc"] not in registered_services:
+        raise ValueError(f"Service niet gevonden: {payload['svc']}")
+
+    # 5. Controleer expiratie (standaard JWT)
+    # jwt.decode doet dit automatisch met verify_exp=True
+
+    return payload
+```
+
+### Contract Aanmaken en Ondertekenen (curl)
+
+```bash
+# Stap 1: Contract indienen bij provider
+curl -X POST https://provider-manager.example.com:8443/contracts \
+  --cert pkio_cert.pem --key pkio_key.pem --cacert pkio_ca_chain.pem \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": {
+      "fsc_version": "1.0.0",
+      "iv": "'$(uuidgen)'",
+      "group_id": "nl-overheid-productie",
+      "validity": {
+        "not_before": '$(date +%s)',
+        "not_after": '$(date -v+1y +%s)'
+      },
+      "grants": [{
+        "type": "ServiceConnectionGrant",
+        "service_name": "brp-bevraging",
+        "outway": {
+          "public_key_thumbprint": "sha256:abc123..."
+        }
+      }],
+      "hash_algorithm": "HASH_ALGORITHM_SHA3_512",
+      "created_at": '$(date +%s)'
+    },
+    "signatures": [{
+      "peer_id": "00000001823288444000",
+      "certificate_thumbprint": "sha256:def456...",
+      "signature": "base64_signature_here",
+      "acceptance": "ACCEPTED"
+    }]
+  }'
+
+# Stap 2: Contract accepteren door provider
+CONTRACT_HASH="returned_contract_hash"
+curl -X PUT "https://provider-manager.example.com:8443/contracts/${CONTRACT_HASH}/accept" \
+  --cert pkio_cert.pem --key pkio_key.pem --cacert pkio_ca_chain.pem \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signature": {
+      "peer_id": "00000001234567890000",
+      "certificate_thumbprint": "sha256:ghi789...",
+      "signature": "base64_provider_signature",
+      "acceptance": "ACCEPTED"
+    }
+  }'
+```
+
+### Service Discovery via Directory (curl)
+
+```bash
+# Beschikbare services ophalen
+curl -s https://directory.example.com:8443/services \
+  --cert pkio_cert.pem --key pkio_key.pem --cacert pkio_ca_chain.pem | jq
+
+# Peers in de groep ophalen
+curl -s https://directory.example.com:8443/peers \
+  --cert pkio_cert.pem --key pkio_key.pem --cacert pkio_ca_chain.pem | jq
+
+# Specifieke service details
+curl -s "https://directory.example.com:8443/services?name=brp-bevraging" \
+  --cert pkio_cert.pem --key pkio_key.pem --cacert pkio_ca_chain.pem | jq
+```
+
+## Foutafhandeling
+
+### Inway Error Codes
+
+| HTTP Status | Fsc-Error-Code | Beschrijving | Actie |
+|------------|---------------|-------------|-------|
+| 401 | `ACCESS_TOKEN_MISSING` | Geen Fsc-Authorization header | Voeg token toe via Outway |
+| 401 | `ACCESS_TOKEN_INVALID` | Token handtekening ongeldig | Nieuw token ophalen |
+| 401 | `ACCESS_TOKEN_EXPIRED` | Token verlopen | Nieuw token ophalen |
+| 403 | `WRONG_GROUP_ID_IN_TOKEN` | Group ID in token matcht niet | Controleer groepsconfiguratie |
+| 404 | `SERVICE_NOT_FOUND` | Service niet geregistreerd | Controleer servicenaam in contract |
+| 500 | `TRANSACTION_LOG_WRITE_ERROR` | Transactielog schrijven mislukt | Probeer later opnieuw |
+| 502 | `SERVICE_UNREACHABLE` | Achterliggende service onbereikbaar | Probeer later opnieuw |
+
+### Error Response Formaat
+
+```json
+{
+  "code": "ACCESS_TOKEN_EXPIRED",
+  "domain": "inway",
+  "details": "Token expired at 2024-01-15T10:30:00Z"
+}
+```
+
+De `Fsc-Error-Code` header wordt altijd meegegeven bij foutresponses, naast de HTTP status code.
+
+### Outway Error Code
+
+| HTTP Status | Fsc-Error-Code | Beschrijving |
+|------------|---------------|-------------|
+| 405 | `METHOD_UNSUPPORTED` | CONNECT methode niet ondersteund |
+
+### Retry Strategie
+
+```python
+import time
+
+def call_service_via_fsc(service_name: str, path: str, max_retries: int = 3):
+    """Roep een FSC service aan met retry bij tijdelijke fouten."""
+    for attempt in range(max_retries):
+        response = outway.proxy_request(service_name, path)
+
+        error_code = response.headers.get("Fsc-Error-Code")
+        if not error_code:
+            return response  # Succes of applicatie-error
+
+        if error_code in ("ACCESS_TOKEN_EXPIRED", "ACCESS_TOKEN_INVALID"):
+            # Token vernieuwen en opnieuw proberen
+            token_cache.pop(service_name, None)
+            continue
+
+        if error_code in ("SERVICE_UNREACHABLE", "TRANSACTION_LOG_WRITE_ERROR"):
+            # Tijdelijke fout - exponential backoff
+            time.sleep(min(2 ** attempt * 5, 60))
+            continue
+
+        # Permanente fouten niet opnieuw proberen
+        break
+
+    return response
+```
 
 ## Tests & Validatie
 

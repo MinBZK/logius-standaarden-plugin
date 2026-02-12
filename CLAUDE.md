@@ -16,10 +16,14 @@ Alle content in deze repo is in het **Nederlands**: skill descriptions, body tek
 1. YAML frontmatter met `name`, `description`, `model: sonnet`, `allowed-tools`
 2. Korte introductie - wat is deze standaard, voor wie
 3. Repository tabel - alle repos met GitHub links en publicatie-URLs
-4. Kernconcepten - 5-10 bullets
-5. Tests & Validatie - beschikbare checks en commando's
-6. Handige commando's - `gh api` en `curl` voorbeelden
-7. Gerelateerde skills - kruisverwijzingen
+4. Technische secties - architectuur, protocollen, configuratie (per domein)
+5. Implementatievoorbeelden - werkende code in Python, JavaScript, curl, XML/JSON
+6. Foutafhandeling - error responses, status codes, retry patronen
+7. Tests & Validatie - beschikbare checks en commando's
+8. Handige commando's - `gh api` en `curl` voorbeelden
+9. Gerelateerde skills - kruisverwijzingen
+
+Elke skill moet genoeg bevatten zodat een agent standaard-conforme code kan genereren zonder externe bronnen op te halen.
 
 ### Description triggers
 Descriptions bevatten zowel Nederlandse als technische Engelse triggerwoorden zodat de skill bij relevante vragen wordt geactiveerd.

@@ -169,6 +169,54 @@ gh api repos/logius-standaarden/Automatisering/contents/.github/workflows/label-
   -H "Accept: application/vnd.github.raw"
 ```
 
+### Calling Workflow Voorbeeld
+
+Individuele repos hoeven alleen een dunne workflow te definiëren die de centrale workflow aanroept:
+
+```yaml
+# .github/workflows/build.yml in een standaarden-repo
+name: Build document
+on:
+  push:
+    branches: [main, 'consultatie/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    uses: logius-standaarden/Automatisering/.github/workflows/build.yml@main
+    with:
+      source-files: index.html
+```
+
+```yaml
+# .github/workflows/check.yml
+name: Check document
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    needs: build  # wacht op build cache
+    uses: logius-standaarden/Automatisering/.github/workflows/check.yml@main
+```
+
+```yaml
+# .github/workflows/publish.yml
+name: Publish document
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    needs: [build, check]
+    uses: logius-standaarden/Automatisering/.github/workflows/publish.yml@main
+```
+
 ## Nieuw Document Starten
 
 Stap-voor-stap handleiding om een nieuw standaarddocument op te zetten:
@@ -212,6 +260,25 @@ muffet http://localhost:8080/index.html
 ```
 
 Tip: Draai deze checks lokaal voordat je een PR opent om CI-failures te voorkomen.
+
+## Foutafhandeling
+
+### Veelvoorkomende Build Fouten
+
+| Fout | Oorzaak | Oplossing |
+|------|---------|----------|
+| `ReSpec error: data-include file not found` | Markdown-bestand ontbreekt of verkeerde naam | Controleer dat alle `data-include` bestanden bestaan |
+| `WCAG violation: Images must have alternate text` | Afbeelding zonder alt-tekst | Voeg alt-tekst toe: `![Beschrijving](media/img.svg)` |
+| `markdownlint MD013: Line length` | Regel te lang | Breek regels af op ~120 karakters |
+| `muffet: 404 Not Found` | Dode link in document | Verwijder of update de link |
+| `PDF generation failed` | Puppeteer/Chrome crasht | Controleer of document valid HTML genereert |
+
+### Consultatie Branch Gedrag
+
+Wanneer je werkt op een `consultatie/*` branch:
+- De build workflow overschrijft `specStatus` automatisch naar `"cv"` (Consultation Version)
+- Het document krijgt de consultatie-opmaak (andere header, consultatie-banner)
+- Na merge naar `main` wordt `specStatus` uit `js/config.js` gebruikt
 
 ## Tech Radar
 

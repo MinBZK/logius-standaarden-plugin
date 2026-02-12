@@ -144,6 +144,220 @@ Bij het werken met notificaties gelden strikte eisen op het gebied van beveiligi
 - **Webhook** - HTTP callback voor het afleveren van events bij abonnees (push-model)
 - **Claim Check Pattern** - Patroon waarbij de payload extern wordt opgeslagen en het event alleen een referentie bevat
 
+## Implementatievoorbeelden
+
+### Event Publiceren met CloudEvents SDK (Python)
+
+```python
+from cloudevents.http import CloudEvent
+from cloudevents.conversion import to_json
+import requests, uuid
+from datetime import datetime, timezone
+
+# CloudEvent aanmaken conform NL GOV profiel
+event = CloudEvent({
+    "id": str(uuid.uuid4()),
+    "source": "urn:nld:oin:00000001823288444000:systeem:BRP-component",
+    "type": "nl.brp.persoon-verhuisd",
+    "specversion": "1.0",
+    "subject": "999990342",  # BSN van betrokkene
+    "time": datetime.now(timezone.utc).isoformat(),
+    "datacontenttype": "application/json",
+}, data={
+    "oud_adres": {"straat": "Keizersgracht", "huisnummer": "100", "plaats": "Amsterdam"},
+    "nieuw_adres": {"straat": "Herengracht", "huisnummer": "200", "plaats": "Amsterdam"},
+})
+
+# Publiceer naar notificatieservice
+response = requests.post(
+    "https://notificaties.example.com/api/v1/notifications",
+    headers={
+        "Authorization": "Bearer eyJ...",
+        "Content-Type": "application/cloudevents+json",
+    },
+    data=to_json(event),
+)
+print(f"Status: {response.status_code}")  # 200 OK
+```
+
+### Webhook Ontvanger (FastAPI)
+
+```python
+from fastapi import FastAPI, Request, HTTPException
+from cloudevents.http import from_http
+
+app = FastAPI(title="CloudEvents Webhook Ontvanger")
+
+@app.post("/webhooks/cloudevents")
+async def receive_event(request: Request):
+    """Ontvang en verwerk CloudEvents conform NL GOV profiel."""
+    body = await request.body()
+    headers = dict(request.headers)
+
+    try:
+        event = from_http(headers, body)
+    except Exception:
+        raise HTTPException(400, "Ongeldig CloudEvent formaat")
+
+    # Verplichte attributen valideren (NL GOV profiel)
+    assert event["specversion"] == "1.0"
+    assert event["source"].startswith("urn:nld:")  # URN met nld namespace
+    assert "." in event["type"]  # Reverse Domain Name Notation
+
+    # Event verwerken op basis van type
+    match event["type"]:
+        case "nl.brp.persoon-verhuisd":
+            await verwerk_verhuizing(event)
+        case "nl.kvk.inschrijving-gewijzigd":
+            await verwerk_kvk_wijziging(event)
+        case _:
+            print(f"Onbekend event type: {event['type']}")
+
+    return {"status": "accepted", "event_id": event["id"]}
+
+async def verwerk_verhuizing(event):
+    """Verwerk een BRP verhuizing notificatie."""
+    subject = event["subject"]  # BSN
+    data = event.data
+    print(f"Persoon {subject} verhuisd naar {data['nieuw_adres']}")
+```
+
+### Event Publiceren met curl
+
+```bash
+# CloudEvent publiceren in structured content mode
+curl -X POST https://notificaties.example.com/api/v1/notifications \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/cloudevents+json" \
+  -d '{
+    "specversion": "1.0",
+    "id": "f3dce042-cd6e-4977-844d-05be8dce7cea",
+    "source": "urn:nld:oin:00000001823288444000:systeem:BRP-component",
+    "type": "nl.brp.persoon-verhuisd",
+    "subject": "999990342",
+    "time": "2024-01-15T10:30:00Z",
+    "datacontenttype": "application/json",
+    "data": {"nieuw_adres": "Herengracht 200, Amsterdam"}
+  }'
+
+# Binary content mode (attributen als HTTP headers)
+curl -X POST https://notificaties.example.com/api/v1/notifications \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "ce-specversion: 1.0" \
+  -H "ce-id: f3dce042-cd6e-4977-844d-05be8dce7cea" \
+  -H "ce-source: urn:nld:oin:00000001823288444000:systeem:BRP-component" \
+  -H "ce-type: nl.brp.persoon-verhuisd" \
+  -H "ce-subject: 999990342" \
+  -H "ce-time: 2024-01-15T10:30:00Z" \
+  -d '{"nieuw_adres": "Herengracht 200, Amsterdam"}'
+```
+
+### Express.js Webhook Ontvanger
+
+```javascript
+const express = require('express');
+const { HTTP } = require('cloudevents');
+
+const app = express();
+app.use(express.json());
+
+app.post('/webhooks/cloudevents', (req, res) => {
+  try {
+    const event = HTTP.toEvent({ headers: req.headers, body: req.body });
+
+    // NL GOV profiel validatie
+    if (!event.source.startsWith('urn:nld:')) {
+      return res.status(400).json({ error: 'Source moet URN nld namespace gebruiken' });
+    }
+
+    console.log(`Event ontvangen: ${event.type} van ${event.source}`);
+    console.log(`Subject: ${event.subject}, Data:`, event.data);
+
+    // Verwerk event
+    switch (event.type) {
+      case 'nl.brp.persoon-verhuisd':
+        handleVerhuizing(event);
+        break;
+      default:
+        console.log(`Onbekend type: ${event.type}`);
+    }
+
+    res.status(200).json({ status: 'accepted', event_id: event.id });
+  } catch (err) {
+    res.status(400).json({ error: 'Ongeldig CloudEvent' });
+  }
+});
+
+app.listen(8080, () => console.log('Webhook listener op poort 8080'));
+```
+
+### Claim Check Pattern voor Grote Payloads
+
+```python
+# Wanneer event data te groot is voor het bericht zelf,
+# gebruik het dataref attribuut om naar een extern endpoint te verwijzen.
+
+event = CloudEvent({
+    "id": str(uuid.uuid4()),
+    "source": "urn:nld:oin:00000001823288444000:systeem:DMS",
+    "type": "nl.dms.document-beschikbaar",
+    "specversion": "1.0",
+    "subject": "doc-2024-001",
+    "dataref": "https://dms.example.com/api/v1/documents/doc-2024-001",  # claim check
+    # Geen 'data' veld - payload wordt separaat opgehaald door ontvanger
+})
+
+# Ontvanger haalt payload op via dataref met eigen autorisatie
+document = requests.get(
+    event["dataref"],
+    headers={"Authorization": "Bearer receiver_token"},
+    cert=("pkio_cert.pem", "pkio_key.pem"),
+)
+```
+
+## Foutafhandeling
+
+### Notificatieservice Error Responses
+
+| Status | Beschrijving | Actie |
+|--------|-------------|-------|
+| 200 | Event succesvol gepubliceerd | - |
+| 400 | Ongeldig CloudEvent (verplicht attribuut ontbreekt) | Corrigeer event en probeer opnieuw |
+| 401 | JWT token ongeldig of verlopen | Vernieuw token |
+| 403 | Scope `notifications.distribute` ontbreekt | Vraag juiste scope aan |
+| 429 | Rate limit bereikt | Wacht en probeer opnieuw (exponential backoff) |
+| 500 | Interne fout notificatieservice | Probeer opnieuw na 30 seconden |
+
+### Webhook Delivery Retry Patroon
+
+Bij het afleveren van events aan webhook endpoints geldt een retry-strategie:
+
+```python
+import time
+
+def deliver_event(webhook_url: str, event: dict, max_retries: int = 5):
+    """Lever event af aan webhook met exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(webhook_url, json=event, timeout=10)
+            if response.status_code == 200:
+                return True
+            if response.status_code >= 500:
+                # Server error - retry met backoff
+                wait = min(2 ** attempt * 5, 300)  # max 5 minuten
+                time.sleep(wait)
+                continue
+            if response.status_code >= 400:
+                # Client error - niet opnieuw proberen
+                log.error(f"Webhook afgewezen: {response.status_code}")
+                return False
+        except requests.Timeout:
+            wait = min(2 ** attempt * 5, 300)
+            time.sleep(wait)
+    return False  # Alle pogingen mislukt
+```
+
 ## Tests & Validatie
 
 Notificatie repos gebruiken de centrale `Automatisering` workflows:

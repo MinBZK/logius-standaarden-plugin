@@ -154,6 +154,107 @@ De Linked Data module biedt specifieke richtlijnen voor het beheer van semantisc
 
 De Open Source module beschrijft governance voor open source componenten die bij standaarden horen. Dit omvat licentiekeuze, contributor agreements, en het beheer van referentie-implementaties.
 
+## Beheermodel Template
+
+Een BOMOS-conform beheermodel bevat minimaal de volgende secties. Gebruik het [BOMOS-voorbeeld-beheermodel](https://github.com/logius-standaarden/BOMOS-voorbeeld-beheermodel) als startpunt.
+
+### Document Structuur
+
+```markdown
+# Beheermodel [Naam Standaard]
+
+## 1. Strategie
+### 1.1 Governance
+- Besluitvormingsstructuur (wie beslist over wijzigingen?)
+- Samenstelling gremia (technisch overleg, stuurgroep)
+- Vergaderfrequentie en besluitvormingsprocedure
+
+### 1.2 Visie
+- Doelgroep en toepassingsgebied
+- Langetermijnvisie (3-5 jaar)
+- Gewenste marktpositie en adoptiegraad
+
+### 1.3 Financiering
+- Begrotingsmodel en financieringsbronnen
+- Kostenverantwoording
+
+## 2. Tactiek
+### 2.1 Architectuur
+- Technische en functionele keuzes
+- Samenhang met andere standaarden
+
+### 2.2 Specificatiebeheer
+- Versiebeheer (semantic versioning)
+- Onderhoud van specificatiedocumenten
+
+### 2.3 Wijzigingsbeheer
+- RFC-procedure (Request for Change)
+- Indienen, beoordelen en doorvoeren van wijzigingen
+- GitHub issue workflow
+
+### 2.4 Adoptiestrategie
+- Forum Standaardisatie "pas-toe-of-leg-uit"
+- Promotie en outreach
+
+### 2.5 Kwaliteitsbeleid
+- Kwaliteitscriteria voor de standaard
+- Review- en testprocessen
+
+### 2.6 Rechtenmanagement
+- Licentiemodel (bijv. CC0, CC-BY)
+- Intellectueel eigendom
+
+## 3. Operationeel
+### 3.1 Ontwikkelproces
+- GitHub-based workflow
+- Branch strategie en PR-reviews
+
+### 3.2 Documentatie
+- ReSpec publicatie
+- Release notes bij elke versie
+
+## 4. Implementatieondersteuning
+### 4.1 Helpdesk
+- Contactkanalen (GitHub issues, email)
+- Responstijden
+
+### 4.2 Referentie-implementaties
+- Beschikbare tooling en voorbeelden
+
+### 4.3 Validatie
+- Beschikbare testtools en linters
+
+## 5. Communicatie
+### 5.1 Publicatie
+- Website en GitHub Pages
+- Verspreiding via Forum Standaardisatie
+
+### 5.2 Community
+- Werkgroepen en bijeenkomsten
+- Bijdragerichtlijnen
+```
+
+### BOMOS Conformiteit Checklist
+
+- [ ] **Governance** - Besluitvormingsstructuur beschreven
+- [ ] **Visie** - Doelgroep en toepassingsgebied vastgelegd
+- [ ] **Financiering** - Begrotingsmodel aanwezig
+- [ ] **Architectuur** - Technische keuzes en samenhang beschreven
+- [ ] **Specificatiebeheer** - Versiebeleid vastgelegd
+- [ ] **Wijzigingsbeheer** - RFC-procedure beschreven
+- [ ] **Adoptiestrategie** - Plan voor adoptiebevordering
+- [ ] **Kwaliteitsbeleid** - Criteria en reviewproces beschreven
+- [ ] **Rechtenmanagement** - Licentie en IP-beleid vastgelegd
+- [ ] **Ontwikkelproces** - Werkwijze beschreven
+- [ ] **Documentatie** - Publicatie- en versieproces vastgelegd
+- [ ] **Helpdesk** - Contactkanalen en responstijden
+- [ ] **Referentie-implementaties** - Beschikbare tooling beschreven
+- [ ] **Validatie** - Testtools en conformiteitstests
+- [ ] **Publicatie** - Distributiekanalen beschreven
+- [ ] **Community** - Participatiemodel beschreven
+
+Een organisatie werkt conform BOMOS wanneer voor **elke** activiteit een bewuste beschrijving is opgenomen, ook als die beschrijving is: "deze activiteit vullen wij (nog) niet in."
+
 ## Tests & Validatie
 
 BOMOS repos gebruiken de centrale `Automatisering` workflows:

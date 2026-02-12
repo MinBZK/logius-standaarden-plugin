@@ -242,6 +242,212 @@ cd /tmp/logboek-demo && docker compose up -d
 make build && make run
 ```
 
+## Implementatievoorbeelden
+
+### Python Applicatie met OpenTelemetry SDK
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+
+# Configureer de tracer met applicatie-metadata
+resource = Resource.create({
+    "service.name": "mijn-applicatie",
+    "service.version": "1.0.0",
+    "deployment.environment": "production",
+})
+
+provider = TracerProvider(resource=resource)
+provider.add_span_processor(
+    BatchSpanProcessor(OTLPSpanExporter(endpoint="grpc://logboek:4317"))
+)
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("mijn-applicatie")
+
+def verwerk_aanvraag(bsn: str, verwerking_id: str):
+    """Log een dataverwerking conform Logboek Dataverwerkingen standaard."""
+    with tracer.start_as_current_span("verwerk-aanvraag") as span:
+        # Verplichte dpl.core attributen
+        span.set_attribute("dpl.core.processing_activity_id",
+            f"https://register.example.com/verwerkingen/{verwerking_id}")
+        span.set_attribute("dpl.core.data_subject_id", bsn)  # versleuteld in productie
+        span.set_attribute("dpl.core.data_subject_id_type", "BSN")
+
+        # Verwerking uitvoeren
+        resultaat = opvragen_gegevens(bsn)
+
+        if resultaat.error:
+            span.set_status(trace.StatusCode.ERROR, resultaat.error)
+            span.set_attribute("exception.message", str(resultaat.error))
+        else:
+            span.set_status(trace.StatusCode.OK)
+
+        return resultaat
+```
+
+### Cross-organisatie Verwerking met W3C Trace Context
+
+```python
+import requests
+from opentelemetry import trace
+from opentelemetry.propagate import inject
+
+tracer = trace.get_tracer("organisatie-a")
+
+def vraag_gegevens_op_bij_organisatie_b(bsn: str):
+    """Cross-organisatie call met W3C Trace Context propagatie."""
+    with tracer.start_as_current_span("opvragen-externe-gegevens") as span:
+        # dpl.core attributen voor deze verwerking
+        span.set_attribute("dpl.core.processing_activity_id",
+            "https://register.example.com/verwerkingen/opvragen-brp")
+        span.set_attribute("dpl.core.data_subject_id", bsn)
+        span.set_attribute("dpl.core.data_subject_id_type", "BSN")
+
+        # W3C Trace Context headers automatisch injecteren
+        headers = {}
+        inject(headers)  # voegt traceparent en tracestate headers toe
+        # headers bevat nu: {"traceparent": "00-<trace_id>-<span_id>-01"}
+
+        # Request naar Organisatie B
+        response = requests.get(
+            "https://api.organisatie-b.nl/v1/personen",
+            params={"bsn": bsn},
+            headers=headers,
+            cert=("pkio_cert.pem", "pkio_key.pem"),
+        )
+
+        # Referentie naar externe verwerking loggen
+        span.set_attribute("dpl.core.foreign_operation.processor",
+            "https://api.organisatie-b.nl/v1/personen")
+
+        return response.json()
+```
+
+### Ontvangen van Cross-organisatie Requests (FastAPI)
+
+```python
+from fastapi import FastAPI, Request
+from opentelemetry import trace
+from opentelemetry.propagate import extract
+
+app = FastAPI()
+tracer = trace.get_tracer("organisatie-b")
+
+@app.get("/v1/personen")
+async def get_persoon(bsn: str, request: Request):
+    """Ontvang request met W3C Trace Context van andere organisatie."""
+    # W3C Trace Context uit inkomende headers extraheren
+    context = extract(dict(request.headers))
+
+    with tracer.start_as_current_span("verwerk-extern-verzoek", context=context) as span:
+        # Dezelfde trace_id als Organisatie A, nieuwe span_id
+        span.set_attribute("dpl.core.processing_activity_id",
+            "https://register.organisatie-b.nl/verwerkingen/leveren-brp")
+        span.set_attribute("dpl.core.data_subject_id", bsn)
+        span.set_attribute("dpl.core.data_subject_id_type", "BSN")
+
+        # Bron van het externe verzoek vastleggen
+        span.set_attribute("dpl.core.foreign_operation.processor",
+            request.headers.get("origin", "onbekend"))
+
+        persoon = database.get_persoon(bsn)
+        return persoon
+```
+
+### Meerdere Betrokkenen per Verwerking
+
+```python
+def verwerk_batch(bsn_lijst: list[str], verwerking_id: str):
+    """Bij meerdere betrokkenen: apart logregel per persoon."""
+    with tracer.start_as_current_span("batch-verwerking") as parent_span:
+        parent_span.set_attribute("dpl.core.processing_activity_id",
+            f"https://register.example.com/verwerkingen/{verwerking_id}")
+
+        for bsn in bsn_lijst:
+            # Child span per betrokkene (zelfde trace_id, unieke span_id)
+            with tracer.start_as_current_span(f"verwerk-persoon") as child_span:
+                child_span.set_attribute("dpl.core.data_subject_id", bsn)
+                child_span.set_attribute("dpl.core.data_subject_id_type", "BSN")
+                child_span.set_attribute("dpl.core.processing_activity_id",
+                    f"https://register.example.com/verwerkingen/{verwerking_id}")
+                verwerk_persoon(bsn)
+```
+
+### Docker Demo Starten en Gebruiken
+
+```bash
+# Demo-omgeving clonen en starten
+gh repo clone logius-standaarden/logboek-dataverwerkingen-demo /tmp/logboek-demo
+cd /tmp/logboek-demo
+
+# Services starten (currus=logboek, grafana=dashboard, lamina=register, munera=applicatie)
+docker compose up -d
+
+# Status controleren
+docker compose ps
+
+# Grafana dashboard openen (http://localhost:3000)
+# Logregels bekijken via de Grafana Tempo data source
+
+# Test-verwerkingen genereren
+curl -X POST http://localhost:8080/api/v1/verwerkingen \
+  -H "Content-Type: application/json" \
+  -d '{
+    "processing_activity_id": "https://register.example.com/verwerkingen/test",
+    "data_subject_id": "999990342",
+    "data_subject_id_type": "BSN"
+  }'
+
+# Demo stoppen
+docker compose down
+```
+
+## Foutafhandeling
+
+### Status Waarden en Wanneer te Gebruiken
+
+| Status | Wanneer | Voorbeeld |
+|--------|---------|-----------|
+| **Unset** (standaard) | Verwerking afgerond zonder systeemfout, ook als er geen resultaat is | Persoon niet gevonden in BRP |
+| **Ok** | Expliciete succesmarkering (optioneel) | Gegevens succesvol opgehaald |
+| **Error** | Systeemfout tijdens verwerking | Database timeout, API onbereikbaar |
+
+**Let op:** Een gebruikersannulering is GEEN error. Markeer als Ok met een expliciete actie.
+
+### Error Logging met Exception Details
+
+```python
+with tracer.start_as_current_span("verwerk-gegevens") as span:
+    span.set_attribute("dpl.core.processing_activity_id", verwerking_url)
+    span.set_attribute("dpl.core.data_subject_id", bsn)
+    span.set_attribute("dpl.core.data_subject_id_type", "BSN")
+    try:
+        result = external_api.get(bsn)
+    except TimeoutError as e:
+        span.set_status(trace.StatusCode.ERROR, "External API timeout")
+        span.set_attribute("exception.type", "TimeoutError")
+        span.set_attribute("exception.message", str(e))
+        span.set_attribute("exception.stacktrace", traceback.format_exc())
+        raise
+```
+
+### Verplichte Velden Validatie
+
+Een logregel MOET minimaal bevatten:
+- `trace_id` (16 bytes) - uniek per verwerkingsketen
+- `span_id` (8 bytes) - uniek per actie
+- `name` - beschrijvende naam van de actie
+- `start_time` en `end_time` - milliseconden sinds Epoch
+- `status` - Unset, Ok, of Error
+- `dpl.core.processing_activity_id` - URI naar het register
+- `dpl.core.data_subject_id` - (versleuteld) ID van betrokkene
+- `dpl.core.data_subject_id_type` - type identifier (BSN, KvK, etc.)
+
+Als een verplicht veld ontbreekt, MOET de software een standaardwaarde invullen om runtime-fouten te voorkomen. Log sampling is NIET toegestaan.
+
 ## Tests & Validatie
 
 ### Centrale Checks
