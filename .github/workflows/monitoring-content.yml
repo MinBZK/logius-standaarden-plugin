@@ -33,7 +33,7 @@ jobs:
             --format json
 
       - name: Herstel checksums uit cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: .github/monitoring/checksums.json
           key: monitoring-checksums-
@@ -56,7 +56,7 @@ jobs:
             --checksums .github/monitoring/checksums.json
 
       - name: Bewaar checksums in cache
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         if: always()
         with:
           path: .github/monitoring/checksums.json
