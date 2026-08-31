@@ -265,6 +265,8 @@ Bij afwijzing ontvangt de leverancier een e-mail met de specifieke ontbrekende v
 
 De huidige operationele interface voor terugmelden is SOAP/WUS, beschreven in de [Digimelding-Koppelvlakspecificatie](https://github.com/logius-standaarden/Digimelding-Koppelvlakspecificatie). Zie `/ls-dk` voor WUS-implementatiedetails en WSDL-configuratie.
 
+> **Tijdzone:** alle tijdstempels in berichten van en naar Digimelding hebben de tijdzone `Europe/Amsterdam`, niet UTC. Reken tijdstempels om voordat je ze naar Digimelding stuurt of uit een Digimelding-bericht overneemt.
+
 ```bash
 # Digimelding koppelvlakspecificatie bekijken
 gh api repos/logius-standaarden/Digimelding-Koppelvlakspecificatie/contents --jq '.[].name'
