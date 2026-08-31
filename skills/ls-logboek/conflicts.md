@@ -18,7 +18,7 @@ De normatieve hoofdspecificatie heeft sinds 9 april 2026 een vastgestelde versie
 | [logboek-extensie-template](https://github.com/logius-standaarden/logboek-extensie-template) | _(geen DEF)_ | _(geen tags)_ | N.v.t. — alleen werkversies |
 | [logboek-dataverwerkingen-inleiding](https://github.com/logius-standaarden/logboek-dataverwerkingen-inleiding) | _(geen DEF)_ | _(geen tags)_ | N.v.t. — alleen werkversies |
 | [logboek-dataverwerkingen-juridisch-beleidskader](https://github.com/logius-standaarden/logboek-dataverwerkingen-juridisch-beleidskader) | _(geen DEF)_ | _(geen tags)_ | N.v.t. — alleen werkversies |
-| [logboek-dataverwerkingen-demo](https://github.com/logius-standaarden/logboek-dataverwerkingen-demo) ⚠️ | _(geen DEF)_ | _(geen tags)_ | **Gearchiveerd** augustus 2026, README meldt dat de demo verouderd is. Demo/referentie-implementatie |
+| [logboek-dataverwerkingen-demo](https://github.com/logius-standaarden/logboek-dataverwerkingen-demo) | _(geen DEF)_ | _(geen tags)_ | **Gearchiveerd** augustus 2026, README meldt dat de demo verouderd is. Demo/referentie-implementatie |
 
 ## Keuze in SKILL.md
 
