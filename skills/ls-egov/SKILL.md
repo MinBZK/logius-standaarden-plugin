@@ -40,9 +40,9 @@ De E-Government standaarden hebben momenteel **alleen werkversies**. Er zijn nog
 | [Terugmelding](https://github.com/logius-standaarden/Terugmelding) | Standaard voor terugmelden op basisregistraties | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/Terugmelding/) |
 | [Terugmelden-API](https://github.com/logius-standaarden/Terugmelden-API) | Werkrepository voor een toekomstige REST API koppelvlakspecificatie voor terugmelden (nog geen specificatie beschikbaar) | Niet gespecificeerd | - | - |
 | [Digimelding-Koppelvlakspecificatie](https://github.com/logius-standaarden/Digimelding-Koppelvlakspecificatie) | Koppelvlakspecificatie voor Digimelding | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/Digimelding-Koppelvlakspecificatie/) |
-| [basisfactuur-rijk](https://github.com/logius-standaarden/basisfactuur-rijk) | Handreiking basisfactuur voor de Rijksoverheid | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/basisfactuur-rijk/) |
-| [basisorder-rijk](https://github.com/logius-standaarden/basisorder-rijk) | Handreiking basisorder voor de Rijksoverheid | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/basisorder-rijk/) |
-| [e-procurement](https://github.com/logius-standaarden/e-procurement) | Overkoepelende e-procurement standaarden | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/e-procurement/) |
+| [basisfactuur-rijk](https://github.com/logius-standaarden/basisfactuur-rijk) | Handreiking basisfactuur voor de Rijksoverheid — **gearchiveerd** augustus 2026 | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/basisfactuur-rijk/) |
+| [basisorder-rijk](https://github.com/logius-standaarden/basisorder-rijk) | Handreiking basisorder voor de Rijksoverheid — **gearchiveerd** augustus 2026 | [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/basisorder-rijk/) |
+| [e-procurement](https://github.com/logius-standaarden/e-procurement) | Overkoepelende e-procurement standaarden — **gearchiveerd** augustus 2026 | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/e-procurement/) |
 
 ---
 
@@ -264,6 +264,8 @@ Bij afwijzing ontvangt de leverancier een e-mail met de specifieke ontbrekende v
 ### Digimelding: Bestaande Koppelvlakspecificatie (SOAP/WUS)
 
 De huidige operationele interface voor terugmelden is SOAP/WUS, beschreven in de [Digimelding-Koppelvlakspecificatie](https://github.com/logius-standaarden/Digimelding-Koppelvlakspecificatie). Zie `/ls-dk` voor WUS-implementatiedetails en WSDL-configuratie.
+
+> **Tijdzone:** alle tijdstempels in berichten van en naar Digimelding hebben de tijdzone `Europe/Amsterdam`, niet UTC. Reken tijdstempels om voordat je ze naar Digimelding stuurt of uit een Digimelding-bericht overneemt.
 
 ```bash
 # Digimelding koppelvlakspecificatie bekijken
