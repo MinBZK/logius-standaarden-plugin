@@ -21,4 +21,10 @@ exclude = [
   "docs\\.oasis-open\\.org",
   "www\\.oasis-open\\.org",
   "www\\.w3\\.org",
+  # SNI-mismatch: het certificaat van gitdocumentatie.logius.nl heeft
+  # CN logius.nl en dekt de hostnaam niet. Lychee (rustls) breekt af op
+  # "received fatal alert: UnrecognisedName" waar curl en browsers gewoon
+  # doorgaan. Alle URLs geven handmatig HTTP 200. Verwijder deze regel
+  # zodra Logius het certificaat aanpast.
+  "gitdocumentatie\\.logius\\.nl",
 ]
