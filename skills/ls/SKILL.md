@@ -43,6 +43,31 @@ Niet alle Logius-standaarden staan op de 'pas-toe-of-leg-uit'-lijst van het Foru
 
 > OAuth-NL-profiel v1.1 is vastgesteld door Logius (DEF), maar op het Forum Standaardisatie nog ["in procedure"](https://www.forumstandaardisatie.nl/intakeadvies-nl-gov-assurance-profile-oauth-20-versie-11) (intake goedgekeurd 24-09-2025); v1.0 is de verplichte versie.
 
+## Forum Beslisboom Open Standaarden
+
+Het Forum Standaardisatie heeft een [Beslisboom Open Standaarden](https://www.forumstandaardisatie.nl/beslisboom/beslisboom-open-standaarden): zes vragen over sector, communicatiekanaal en gegevenssoort, met als uitkomst de standaarden die waarschijnlijk relevant zijn. Waar deze skills routeren op domein (je weet al dat je Digikoppeling nodig hebt), routeert de beslisboom op situatie.
+
+Gebruik de beslisboom bij vragen als "welke standaarden gelden voor mijn project" in plaats van "hoe implementeer ik standaard X". De onderliggende data is als JSON:API op te halen:
+
+```bash
+# Alle standaarden die de beslisboom kan aanraden
+curl -s -H "Accept: application/vnd.api+json" \
+  "https://www.forumstandaardisatie.nl/jsonapi/node/decision_tree?include=decisionTreeSteps.questions.answers.standards" \
+  | jq -r '.included[] | select(.type=="node--standaarden") | .attributes.title' | sort -u
+```
+
+### Dekking en scope
+
+De beslisboom kent 55 standaarden. Deze plugins dekken er 29. De rest valt in drie groepen:
+
+| Groep | Standaarden | Waarom |
+|-------|------------|--------|
+| **Sectorstandaarden — bewust buiten scope** | Aquo, GWSW, NLCS, SIKB0101, SIKB0102, Stosag, VISI, SETU, XBRL, EML_NL, Erfgoedstandaard, E-Portfolio NL, WDO Datamodel | Eigen sectorcommunities met eigen tooling en documentatie. Deze skills dekken de generieke overheidsstandaarden (Logius, Geonovum, internet.nl); sectorstandaarden dekken zou betekenen dat we een Forum-mirror worden. |
+| **Backlog — reële gaten** | ACME, STIX en TAXII, AdES Baseline Profiles, StUF | Passen wel bij de scope maar zijn nog niet uitgewerkt. StUF is de opvallendste: verplicht en centraal in gemeentelijke interoperabiliteit. |
+| **Juridisch en documentformaten — geen eigenaar** | BWB, ECLI, JCDR, ODF, PDF/UA, EPUB, iCalendar, CMIS, ISO 3166-1, WPA2 Enterprise | Geen van de huidige domein-skills claimt dit. ECLI en BWB (wetgeving en jurisprudentie) zijn het meest kansrijk om alsnog op te pakken. |
+
+> **Let op bij dekkingsanalyses:** een scan die op standaardnaam matcht onderschat de dekking. HTTPS en HSTS worden inhoudelijk behandeld in `/inet-web` en ACME-certificaatautomatisering in `/inet-toolbox`, maar niet altijd onder de Forum-naam. Controleer bij een vermeend gat eerst of de inhoud onder een andere noemer aanwezig is.
+
 ## Domeinen
 
 | Skill | Domein | Repos | Beschrijving |
