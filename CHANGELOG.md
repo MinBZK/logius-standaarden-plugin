@@ -5,6 +5,18 @@ Alle noemenswaardige wijzigingen aan deze plugin worden hier gedocumenteerd.
 Het formaat is gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/)
 en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
+## [0.6.0](https://github.com/developer-overheid-nl/skills-standaarden/compare/v0.5.1...v0.6.0) (2026-09-01)
+
+
+### Toegevoegd
+
+* **ls:** documenteer Forum beslisboom en scope-afbakening ([#804](https://github.com/developer-overheid-nl/skills-standaarden/issues/804)) ([1f9a482](https://github.com/developer-overheid-nl/skills-standaarden/commit/1f9a482ca8baa89b9b6869025f9904eca488ecf1))
+
+
+### Opgelost
+
+* **ls:** corrigeer dekkingscijfer en verwerk feedback op scope ([#806](https://github.com/developer-overheid-nl/skills-standaarden/issues/806)) ([76ee28e](https://github.com/developer-overheid-nl/skills-standaarden/commit/76ee28e5f560de91cd97d1ff40f182a1fbe714b2))
+
 ## [0.5.1](https://github.com/developer-overheid-nl/skills-standaarden/compare/v0.5.0...v0.5.1) (2026-08-31)
 
 
