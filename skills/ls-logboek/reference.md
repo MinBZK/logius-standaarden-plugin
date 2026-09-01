@@ -58,6 +58,8 @@ De demo-omgeving simuleert een multi-organisatie opstelling met meerdere microse
 
 ### Demo starten
 
+> **Let op:** de demo-repository is in augustus 2026 gearchiveerd en Logius heeft een waarschuwing in de README gezet dat de demo verouderd is. De code is nog te bekijken als referentie, maar sluit niet meer aan op de huidige v1.0.0-specificatie. Gebruik de normatieve specificatie als bron, niet de demo.
+
 ```bash
 # Demo repo klonen en structuur bekijken
 gh repo clone logius-standaarden/logboek-dataverwerkingen-demo /tmp/logboek-demo

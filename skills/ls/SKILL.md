@@ -43,6 +43,32 @@ Niet alle Logius-standaarden staan op de 'pas-toe-of-leg-uit'-lijst van het Foru
 
 > OAuth-NL-profiel v1.1 is vastgesteld door Logius (DEF), maar op het Forum Standaardisatie nog ["in procedure"](https://www.forumstandaardisatie.nl/intakeadvies-nl-gov-assurance-profile-oauth-20-versie-11) (intake goedgekeurd 24-09-2025); v1.0 is de verplichte versie.
 
+## Forum Beslisboom Open Standaarden
+
+Het Forum Standaardisatie heeft een [Beslisboom Open Standaarden](https://www.forumstandaardisatie.nl/beslisboom/beslisboom-open-standaarden): zes vragen over sector, communicatiekanaal en gegevenssoort, met als uitkomst de standaarden die waarschijnlijk relevant zijn. Waar deze skills routeren op domein (je weet al dat je Digikoppeling nodig hebt), routeert de beslisboom op situatie.
+
+Gebruik de beslisboom bij vragen als "welke standaarden gelden voor mijn project" in plaats van "hoe implementeer ik standaard X". De onderliggende data is als JSON:API op te halen:
+
+```bash
+# Alle standaarden die de beslisboom kan aanraden
+curl -s -H "Accept: application/vnd.api+json" \
+  "https://www.forumstandaardisatie.nl/jsonapi/node/decision_tree?include=decisionTreeSteps.questions.answers.standards" \
+  | jq -r '.included[] | select(.type=="node--standaarden") | .attributes.title' | sort -u
+```
+
+### Dekking en scope
+
+De beslisboom kent 55 standaarden. Deze plugins dekken er 27. De rest valt in drie groepen:
+
+| Groep | Standaarden | Waarom |
+|-------|------------|--------|
+| **Sectorstandaarden — bewust buiten scope** | Aquo, GWSW, NLCS, SIKB0101, SIKB0102, Stosag, VISI, SETU, XBRL, EML_NL, Erfgoedstandaard, E-Portfolio NL, WDO Datamodel | Eigen sectorcommunities met eigen tooling en documentatie. Deze skills dekken de generieke overheidsstandaarden (Logius, Geonovum, internet.nl); sectorstandaarden dekken zou betekenen dat we een Forum-mirror worden. |
+| **Backlog — reële gaten** | ACME, STIX en TAXII, AdES Baseline Profiles, NEN-ISO/IEC 27001, NEN-ISO/IEC 27002 | Passen wel bij de scope maar zijn nog niet uitgewerkt. 27001/27002 worden nu alleen genoemd als grondslag van de BIO, niet als standaard behandeld. |
+| **Juridisch en documentformaten — geen eigenaar** | BWB, ECLI, JCDR, ODF, PDF/A, PDF/UA, EPUB, iCalendar, CMIS, ISO 3166-1, WPA2 Enterprise | Geen van de huidige domein-skills claimt dit. ECLI en BWB (wetgeving en jurisprudentie) zijn het meest kansrijk om alsnog op te pakken. |
+| **StUF — bewust niet** | StUF | Verplicht en centraal in gemeentelijke interoperabiliteit, maar niet correct te dekken in een skill: de standaard leunt op sectormodellen en implementatiekeuzes die per koppelvlak verschillen. Een half-correcte StUF-skill is schadelijker dan geen. Advies van Eelco Hotting, 2026-08-31. |
+
+> **Let op bij dekkingsanalyses:** naam-matching geeft in twee richtingen een verkeerd beeld. Het onderschat de dekking wanneer inhoud onder een andere noemer staat: HTTPS en HSTS worden behandeld in `/inet-web` en ACME-certificaatautomatisering in `/inet-toolbox`. Het overschat de dekking wanneer een standaard alleen terloops genoemd wordt: NEN-ISO/IEC 27001 en 27002 komen voor als grondslag van de BIO, maar worden nergens als standaard behandeld. Controleer bij twijfel wat de skill daadwerkelijk over de standaard zegt, niet of de naam voorkomt.
+
 ## Domeinen
 
 | Skill | Domein | Repos | Beschrijving |
