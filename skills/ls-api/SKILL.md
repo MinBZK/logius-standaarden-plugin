@@ -51,21 +51,21 @@ paths:
 De ADR kent twee publicatiekanalen (vergelijkbaar met W3C-standaarden):
 
 - **Vastgestelde versie (DEF)**: de officieel goedgekeurde versie, gepubliceerd op `gitdocumentatie.logius.nl`
-- **Werkversie (draft)**: de ontwikkeling richting de volgende release, gepubliceerd op `logius-standaarden.github.io`. De werkversie op GitHub Pages is de lopende ontwikkeling richting de volgende release. De ReSpec-configuratie toont daar nog '2.1.0' maar dit betreft werk-in-uitvoering.
+- **Werkversie (draft)**: de ontwikkeling richting de volgende release, gepubliceerd op `logius-standaarden.github.io`. De werkversie op GitHub Pages is de lopende ontwikkeling richting de volgende release.
 
-Modules hebben geen eigen vaststellingsproces — ze ontlenen hun status aan de standaard die ernaar verwijst. Als de ADR in een vastgestelde versie normatief naar een module verwijst, is die module daarmee ook vastgesteld. Zo is de Geospatial module v1.0.x normatief onderdeel van ADR v2.1.0 en daarmee vastgesteld. De inhoud van Transport Security is in ADR v2.1.0 ingebed als sectie 3.8 met eigen regels (`/core/transport/*`). De module v1.0 staat nog normatief vermeld in de leeswijzer van v2.1.0, maar de GitHub-repository is gearchiveerd.
+Modules hebben geen eigen vaststellingsproces — ze ontlenen hun status aan de standaard die ernaar verwijst. Als de ADR in een vastgestelde versie normatief naar een module verwijst, is die module daarmee ook vastgesteld. ADR v2.2.0 bundelt de modules onder één sectie *Normative modules* met eigen regels: `/core/modules/geospatial`, `/core/modules/signing` en `/core/modules/encryption`. Daarmee zijn ook Signing en Encryption normatief geworden; in v2.1.0 waren dat nog losse werkversies. De inhoud van Transport Security is sinds v2.1.0 ingebed in de hoofdspecificatie (in v2.2.0 sectie 2.11) met eigen regels (`/core/transport/*`); de GitHub-repository is gearchiveerd.
 
 ## Repositories
 
 | Repository | Beschrijving | Licentie | Vastgesteld | Draft |
 |-----------|-------------|--------|------------|-------|
-| [API-Design-Rules](https://github.com/logius-standaarden/API-Design-Rules) | Hoofdspecificatie (ADR) | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | [v2.1.0](https://gitdocumentatie.logius.nl/publicatie/api/adr/2.1.0/) | [Draft](https://logius-standaarden.github.io/API-Design-Rules/) |
+| [API-Design-Rules](https://github.com/logius-standaarden/API-Design-Rules) | Hoofdspecificatie (ADR) | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | [v2.2.0](https://gitdocumentatie.logius.nl/publicatie/api/adr/2.2.0/) | [Draft](https://logius-standaarden.github.io/API-Design-Rules/) |
 | [ADR-Beheermodel](https://github.com/logius-standaarden/ADR-Beheermodel) | Beheermodel voor de ADR standaard — **gearchiveerd**, vervangen door API-Standaarden-Beheermodel | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | [v1.0](https://gitdocumentatie.logius.nl/publicatie/api/adr-beheer/1.0/) | - |
 | [API-Standaarden-Beheermodel](https://github.com/logius-standaarden/API-Standaarden-Beheermodel) | Overkoepelend beheermodel API-standaarden | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/API-Standaarden-Beheermodel/) |
-| [API-mod-geospatial](https://github.com/logius-standaarden/API-mod-geospatial) | Module: Geospatial (GeoJSON, CRS) — normatief in ADR v2.1.0 | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | [v1.0.3](https://gitdocumentatie.logius.nl/publicatie/api/mod-geo/1.0.3/) | [Draft](https://logius-standaarden.github.io/API-mod-geospatial/) |
-| [API-mod-transport-security](https://github.com/logius-standaarden/API-mod-transport-security) | Module: Transport Security — **gearchiveerd**; inhoud ingebed in ADR v2.1.0; normatief vermeld in leeswijzer; repo gearchiveerd | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | - |
-| [API-mod-signing](https://github.com/logius-standaarden/API-mod-signing) | Module: HTTP Message Signing — draft | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/API-mod-signing/) |
-| [API-mod-encryption](https://github.com/logius-standaarden/API-mod-encryption) | Module: Encryption (JWE) — draft | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/API-mod-encryption/) |
+| [API-mod-geospatial](https://github.com/logius-standaarden/API-mod-geospatial) | Module: Geospatial (GeoJSON, CRS) — normatief in ADR v2.2.0 (`/core/modules/geospatial`) | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | [v1.0.3](https://gitdocumentatie.logius.nl/publicatie/api/mod-geo/1.0.3/) | [Draft](https://logius-standaarden.github.io/API-mod-geospatial/) |
+| [API-mod-transport-security](https://github.com/logius-standaarden/API-mod-transport-security) | Module: Transport Security — **gearchiveerd**; inhoud ingebed in de hoofdspecificatie sinds ADR v2.1.0 (v2.2.0 sectie 2.11) | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | - |
+| [API-mod-signing](https://github.com/logius-standaarden/API-mod-signing) | Module: HTTP Message Signing — normatief in ADR v2.2.0 (`/core/modules/signing`) | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/API-mod-signing/) |
+| [API-mod-encryption](https://github.com/logius-standaarden/API-mod-encryption) | Module: Encryption (JWE) — normatief in ADR v2.2.0 (`/core/modules/encryption`) | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | [Draft](https://logius-standaarden.github.io/API-mod-encryption/) |
 | [api-linter-impactanalyse](https://github.com/logius-standaarden/api-linter-impactanalyse) | Python tool: test Spectral regels tegen echte OpenAPI specs uit het API-register | Niet gespecificeerd | - | - |
 | [zaakgericht-werken-api](https://github.com/logius-standaarden/zaakgericht-werken-api) | API-specificatie voor zaakgericht werken | [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode.en) | - | - |
 
@@ -142,7 +142,7 @@ Geen technische details (stack traces, interne hints) in foutmeldingen.
 
 ### Transport Security (TLS)
 
-> **Let op:** De Transport Security module werd als aparte module normatief verwezen door ADR v2.0.0. Vanaf ADR v2.1.0 zijn de transport-security-eisen **ingebed in de hoofdspecificatie** (sectie 3.8, regels `/core/transport/*`) en is de [repository gearchiveerd](https://github.com/logius-standaarden/API-mod-transport-security). De module v1.0 staat nog normatief vermeld in de leeswijzer van ADR v2.1.0.
+> **Let op:** De Transport Security module werd als aparte module normatief verwezen door ADR v2.0.0. Vanaf ADR v2.1.0 zijn de transport-security-eisen **ingebed in de hoofdspecificatie** (in v2.2.0 sectie 2.11, regels `/core/transport/*`) en is de [repository gearchiveerd](https://github.com/logius-standaarden/API-mod-transport-security).
 
 Alle verbindingen MOETEN TLS gebruiken (wettelijk verplicht). Volg de laatste NCSC-richtlijnen.
 
@@ -160,7 +160,7 @@ Verplichte security headers in alle API-responses:
 
 ### Geospatial Module (v1.0.3 — vastgesteld)
 
-Normatief onderdeel van ADR v2.1.0. Verplicht bij geospatiale data. Regelt GeoJSON encodering, bounding box filtering, en coördinaatsystemen (CRS). Zie de [vastgestelde versie](https://gitdocumentatie.logius.nl/publicatie/api/mod-geo/1.0.3/).
+Normatief onderdeel van ADR v2.2.0 (`/core/modules/geospatial`). Verplicht bij geospatiale data. Regelt GeoJSON encodering, bounding box filtering, en coördinaatsystemen (CRS). Zie de [vastgestelde versie](https://gitdocumentatie.logius.nl/publicatie/api/mod-geo/1.0.3/).
 
 ### Signing Module (JAdES) — draft
 
