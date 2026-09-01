@@ -28,25 +28,19 @@ Dit document beschrijft bekende discrepanties tussen GitHub-repository tags en d
 
 ## Transport Security module: dubbelzinnige status
 
-De Transport Security module (API-mod-transport-security) heeft een dubbelzinnige status in ADR v2.1.0:
+**Opgelost in ADR v2.2.0 (vastgesteld 2 juni 2026).**
 
-| Aspect | Status | Bron |
-|--------|--------|------|
-| GitHub-repository | **Gearchiveerd** | https://github.com/logius-standaarden/API-mod-transport-security |
-| Inhoud in ADR v2.1.0 | **Ingebed** als sectie 3.8 met eigen regels (`/core/transport/*`) | https://gitdocumentatie.logius.nl/publicatie/api/adr/2.1.0/ |
-| Leeswijzer ADR v2.1.0 | Module v1.0 staat **normatief vermeld** | https://gitdocumentatie.logius.nl/publicatie/api/adr/2.1.0/ |
+In v2.1.0 had de Transport Security module (API-mod-transport-security) een dubbelzinnige status: de inhoud was ingebed in de hoofdspecificatie, de repo was gearchiveerd, maar de leeswijzer vermeldde module v1.0 nog als normatief.
 
-### Analyse
-
-De module-inhoud is feitelijk in de hoofdspecificatie opgenomen, maar de leeswijzer van v2.1.0 vermeldt de module v1.0 nog steeds als normatief. De repo is gearchiveerd, wat suggereert dat het Technisch Overleg de module als afgehandeld beschouwt. De vermelding in de leeswijzer is waarschijnlijk een redactioneel overblijfsel.
+In v2.2.0 is die dubbelzinnigheid weg. De specificatie bevat geen leeswijzer-vermelding en geen verwijzing naar `API-mod-transport-security` meer; de transport-security-eisen staan in sectie 2.11 met regels `/core/transport/*`. De module komt alleen nog voor in de historische changelog-regel bij v2.0.0.
 
 ### Keuze in SKILL.md
 
-De SKILL.md beschrijft de drieledige situatie: inhoud ingebed in v2.1.0, module nog normatief in leeswijzer, repo gearchiveerd. Als de leeswijzer wordt bijgewerkt, moet deze beschrijving opnieuw worden beoordeeld.
+De SKILL.md beschrijft de eisen als onderdeel van de hoofdspecificatie en vermeldt de gearchiveerde repo als historische context. Geen openstaand conflict meer.
 
 ## ADR werkversie-nummering op draft-pagina
 
-De draft-pagina op GitHub Pages ([logius-standaarden.github.io/API-Design-Rules](https://logius-standaarden.github.io/API-Design-Rules/)) toont in de ReSpec-configuratie nog versienummer '2.1.0', terwijl v2.1.0 ook de huidige DEF-versie is. De draft betreft echter werk-in-uitvoering richting de volgende release — het versienummer in ReSpec is simpelweg nog niet opgehoogd. Dit is een bekend patroon bij Logius-standaarden: de ReSpec `defined_in` configuratie wordt pas bijgewerkt wanneer de nieuwe versie wordt vastgesteld.
+De draft-pagina op GitHub Pages ([logius-standaarden.github.io/API-Design-Rules](https://logius-standaarden.github.io/API-Design-Rules/)) loopt in de ReSpec-configuratie achter op de vastgestelde versie. Dit is een bekend patroon bij Logius-standaarden: de ReSpec `defined_in` configuratie wordt pas bijgewerkt wanneer een nieuwe versie wordt vastgesteld. Leidend is altijd `gitdocumentatie.logius.nl`, waar v2.2.0 sinds 2 juni 2026 als DEF staat.
 
 ### Keuze in SKILL.md
 
@@ -83,5 +77,6 @@ De W3C Software License is afkomstig van het ReSpec-template en dekt de tooling-
 - GitHub ADR-Beheermodel: https://github.com/logius-standaarden/ADR-Beheermodel
 - GitHub ADR-Beheermodel tags: https://github.com/logius-standaarden/ADR-Beheermodel/tags
 - GitHub API-mod-transport-security: https://github.com/logius-standaarden/API-mod-transport-security
-- Publicatie ADR v2.1.0: https://gitdocumentatie.logius.nl/publicatie/api/adr/2.1.0/
+- Publicatie ADR v2.2.0: https://gitdocumentatie.logius.nl/publicatie/api/adr/2.2.0/
+- Publicatie ADR v2.1.0 (vorige DEF): https://gitdocumentatie.logius.nl/publicatie/api/adr/2.1.0/
 - Forum Standaardisatie ADR: https://www.forumstandaardisatie.nl/open-standaarden/rest-api-design-rules
