@@ -72,9 +72,9 @@ Elk log record volgt de OpenTelemetry Span-structuur met verplichte en optionele
 
 | Veld | Type | Verplicht | Beschrijving |
 |------|------|-----------|--------------|
-| `trace_id` | 16 bytes | Ja | Uniek trace ID over systemen heen (W3C Trace Context) |
-| `span_id` | 8 bytes | Ja | Uniek action ID binnen een verwerking |
-| `parent_span_id` | 8 bytes | Nee | ID van de aanroepende actie (voor parent-child relaties) |
+| `trace_id` | 16 bytes | Ja | Uniek trace ID over systemen heen (W3C Trace Context). Als hexadecimale string: 32 karakters |
+| `span_id` | 8 bytes | Ja | Uniek action ID binnen een verwerking. Als hexadecimale string: 16 karakters |
+| `parent_span_id` | 8 bytes | Nee | ID van de aanroepende actie (voor parent-child relaties). Als hexadecimale string: 16 karakters |
 | `status` | enum | Ja | `Unset`, `Ok`, of `Error` |
 | `name` | string | Ja | Mensleesbare actienaam (bijv. "Opvragen persoonsgegevens") |
 | `start_time` | uint64 | Ja | Starttijd in milliseconden sinds Unix Epoch |
@@ -84,7 +84,7 @@ Elk log record volgt de OpenTelemetry Span-structuur met verplichte en optionele
 
 **Toelichting:**
 
-- `trace_id` en `span_id` worden automatisch gegenereerd conform W3C Trace Context.
+- `trace_id` en `span_id` worden automatisch gegenereerd conform W3C Trace Context. De specificatie geeft de lengte in bytes; bytes kunnen hexadecimaal of binair worden geëncodeerd, dus een 16-byte `trace_id` is als hex-string 32 karakters lang (zie de [OpenTelemetry-documentatie](https://opentelemetry.io/docs/specs/otel/trace/api/#retrieving-the-traceid-and-spanid)).
 - `parent_span_id` maakt het mogelijk om een boom van gerelateerde acties op te bouwen.
 - `status` geeft aan of de verwerking succesvol was; bij `Error` is aanvullende foutinformatie aan te raden.
 - `resource` identificeert het systeem (naam, versie, omgeving) dat de logregel produceert.
@@ -354,8 +354,8 @@ with tracer.start_as_current_span("verwerk-gegevens") as span:
 ### Verplichte Velden Validatie
 
 Een logregel MOET minimaal bevatten:
-- `trace_id` (16 bytes) - uniek per verwerkingsketen
-- `span_id` (8 bytes) - uniek per actie
+- `trace_id` (16 bytes, 32 hex-karakters) - uniek per verwerkingsketen
+- `span_id` (8 bytes, 16 hex-karakters) - uniek per actie
 - `name` - beschrijvende naam van de actie
 - `start_time` en `end_time` - milliseconden sinds Epoch
 - `status` - Unset, Ok, of Error
