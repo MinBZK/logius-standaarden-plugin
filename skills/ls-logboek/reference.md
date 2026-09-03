@@ -146,6 +146,74 @@ De extensie template biedt een startpunt voor het ontwikkelen van nieuwe extensi
 
 Repository: [logboek-extensie-template](https://github.com/logius-standaarden/logboek-extensie-template)
 
+## Praktijkvoorbeeld: MijnOverheid Zakelijk (MOZa)
+
+[MijnOverheid Zakelijk](https://github.com/MinBZK/MijnOverheidZakelijk) (MinBZK) is een van de eerste overheidsprojecten die Logboek Dataverwerkingen in productie implementeert. Het team heeft een open-source Java/Kotlin library ontwikkeld die het eenvoudig maakt om LDV toe te voegen aan Jakarta-applicaties.
+
+### Library: moza-logboekdataverwerking
+
+- **Repository:** [MinBZK/moza-logboekdataverwerking](https://github.com/MinBZK/moza-logboekdataverwerking)
+- **Taal:** Kotlin (bruikbaar vanuit Java en Kotlin)
+- **Opslag:** ClickHouse database
+- **Kennisbank:** [Jakarta Service Method Interceptor](https://developer.overheid.nl/kennisbank/data/standaarden/logboek-dataverwerkingen/implementaties/jakarta)
+
+De library biedt een declaratieve aanpak via een `@Logboek` annotatie:
+
+```java
+@GET
+@Path("/{identificatieType}/{identificatieNummer}")
+@Logboek(name = "behandelen-aanvraag", processingActivityId = "1234")
+public Response behandelAanvraag() {
+    // LogboekContext wordt automatisch geïnjecteerd
+    logboekContext.setDataSubjectId("000000000");
+    logboekContext.setDataSubjectType("KVK");
+    logboekContext.setStatus(StatusCode.OK);
+    return Response.ok(result).build();
+}
+```
+
+De vier kerncomponenten:
+
+| Component | Rol |
+|-----------|-----|
+| `@Logboek` annotatie | Decorateert service-methoden met verwerkingsnaam en activiteit-ID |
+| `LogboekInterceptor` | Jakarta interceptor die spans aanmaakt, HTTP trace-headers verwerkt |
+| `LogboekContext` | Request-scoped klasse voor dynamische attributen (subject ID, status) |
+| `ProcessingHandler` | Initialiseert OpenTelemetry en beheert de `Tracer` |
+
+### Configuratie
+
+```yaml
+logboekdataverwerking:
+    enabled: true
+    service-name: profiel-service
+    clickhouse:
+        endpoint: http://localhost:8123
+        username: user
+        password: password
+        database: db_name
+        table: table_name
+```
+
+### Geleerde lessen
+
+Het MOZa-team documenteerde hun ervaringen in twee Architecture Decision Records:
+
+1. **Federatieve performance** ([ADR-0007](https://github.com/MinBZK/MijnOverheidZakelijk/blob/main/Docs/structurizr/decisions/0007-logboek-dataverwer.md)): Bij cross-organisatie traces moet recursief bij alle LDV-services worden gecontroleerd op child-spans. Dit schaalt niet zonder een trust registry of overkoepelend trace-ID. Na overleg met het LDV-team op het Fieldlab 2025 zijn oplossingen gevonden.
+
+2. **Implementatiebesluit** ([ADR-0010](https://github.com/MinBZK/MijnOverheidZakelijk/blob/main/Docs/structurizr/decisions/0010-ldv-implementatie.md)): MOZa implementeert LDV in de profielservice en toont de verwerkingshistorie aan ingelogde gebruikers in het portaal. De inzichten-API (lees-extensie) wordt in de toekomst gekoppeld.
+
+### Vergelijking met Python-aanpak
+
+De SKILL.md voorbeelden gebruiken de OpenTelemetry Python SDK met handmatige `span.set_attribute()` aanroepen. De MOZa-library abstraheert dit via Jakarta CDI:
+
+| Aspect | Python (SKILL.md) | Java/Kotlin (MOZa) |
+|--------|--------------------|---------------------|
+| Span aanmaken | `tracer.start_as_current_span()` | `@Logboek` annotatie + interceptor |
+| Attributen zetten | `span.set_attribute("dpl.core.…", …)` | `logboekContext.setDataSubjectId(…)` |
+| Trace propagatie | `inject(headers)` / `extract(headers)` | Automatisch via interceptor |
+| Opslag | Configureerbaar (OTLP exporter) | ClickHouse |
+
 ## Gerelateerde Skills
 
 | Skill     | Relatie                                              |
